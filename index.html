@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120D0A">
+<title>一杯咖啡的样子 v4.2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
+   an instrument readout under it, everything else folds away into drawers while brewing. */
+:root{
+  --bg:#120D0A;        /* roasted, almost black */
+  --surface:#1B1410;   /* a cup's shadow */
+  --raise:#241B15;
+  --line:#33271F;
+  --ink:#F0E4D4;       /* milk foam */
+  --muted:#9C8A7B;
+  --crema:#D9A456;     /* the one accent */
+  --crema-ink:#1A120C;
+  --tuned:#62C08D;     /* "已调好" only */
+  --serif:"Noto Serif SC","Songti SC","STSong",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+main{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:18px 56px;display:flex;flex-direction:column;gap:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--crema);outline-offset:3px}
+[hidden]{display:none!important}
+
+/* header */
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-family:var(--serif);font-weight:700;font-size:1.45rem;letter-spacing:.04em;margin:0;text-wrap:balance}
+.ver{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.08em;white-space:nowrap}
+.ver b{color:var(--crema);font-weight:600}
+
+/* stage */
+.stage{position:relative;width:100%;max-width:440px;margin:0 auto;aspect-ratio:1;border-radius:50%;
+  --glow:0;box-shadow:0 0 calc(18px + 60px*var(--glow)) calc(2px + 10px*var(--glow)) rgba(217,164,86,calc(.05 + .28*var(--glow)))}
+canvas{display:block;width:100%;height:100%;max-width:100%;border-radius:50%}
+.stamp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;
+  font-family:var(--serif);color:rgba(240,228,212,.86);font-size:1rem;letter-spacing:.3em;transition:opacity .6s}
+.stamp small{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:rgba(240,228,212,.55);margin-top:6px}
+body.running .stamp{opacity:0}
+
+/* readout */
+.read{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.read div{background:var(--surface);padding:12px 12px 10px;min-width:0}
+.read span{display:block;font-size:.7rem;color:var(--muted);letter-spacing:.14em}
+.read output{display:block;font-family:var(--mono);font-weight:600;font-size:clamp(1.5rem,7vw,2rem);line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.read output small{font-size:.5em;font-weight:400;color:var(--muted);margin-left:3px}
+.where{display:flex;align-items:center;gap:10px;font-size:.88rem}
+.seglbl{font-family:var(--serif);font-size:1rem;color:var(--crema);white-space:nowrap}
+.bar{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden;min-width:40px}
+.bar i{display:block;height:100%;width:0;background:var(--crema);transition:width .3s linear}
+.note{font-family:var(--serif);font-size:1rem;min-width:3.2em;text-align:right;color:var(--ink)}
+.why{margin:-6px 0 0;font-size:.82rem;color:var(--muted);min-height:2.6em;font-variant-numeric:tabular-nums}
+
+/* transport */
+.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.play{width:56px;height:56px;border-radius:50%;border:0;background:var(--crema);color:var(--crema-ink);font-weight:700;font-size:.95rem;flex:none}
+.play:disabled,.ghost:disabled{opacity:.35;cursor:default}
+.ghost{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:.88rem}
+.transport .seg{margin-left:auto}
+.transport small{color:var(--muted);font-size:.75rem}
+
+/* chips */
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{position:relative;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--raise);font-size:.9rem;line-height:1.3;text-align:left}
+.seg button small{display:block;font-size:.7rem;color:var(--muted);margin-top:1px}
+.seg button[aria-pressed="true"]{background:var(--crema);border-color:var(--crema);color:var(--crema-ink)}
+.seg button[aria-pressed="true"] small{color:rgba(26,18,12,.7)}
+.seg button:disabled{opacity:.3;cursor:not-allowed}
+.seg.mini button{padding:5px 11px;font-size:.8rem}
+.seg button.tuned::after{content:"";position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--tuned);box-shadow:0 0 0 2px var(--raise)}
+.seg button.tuned[aria-pressed="true"]::after{box-shadow:0 0 0 2px var(--crema)}
+.seg button.tuned{padding-right:20px}
+.legend{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.legend::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--tuned)}
+
+/* scale panel */
+.scale{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.scale h2,.drawer summary b{font-size:.78rem;font-weight:600;letter-spacing:.16em;color:var(--muted);margin:0}
+.scale .main{display:flex;flex-wrap:wrap;gap:8px}
+.scale .main button{padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:var(--raise);font-size:.92rem}
+.scale .main button.primary{background:var(--crema);border-color:var(--crema);color:var(--crema-ink);font-weight:600}
+.scale .main button:disabled{opacity:.35;cursor:default}
+.status{margin:0;font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.status::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:8px;vertical-align:1px}
+body.linked .status::before{background:var(--tuned)}
+.sub{display:flex;flex-direction:column;gap:8px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.8rem;color:var(--muted);line-height:1.5}
+.chk input{margin-top:3px;accent-color:var(--crema)}
+.scale details summary{font-size:.8rem;color:var(--muted);cursor:pointer}
+.scale pre{font-family:var(--mono);font-size:.7rem;white-space:pre-wrap;word-break:break-all;color:var(--muted);margin:8px 0 0}
+
+/* cup card */
+.cup{border:1px solid var(--crema);border-radius:16px;padding:16px;background:linear-gradient(160deg,rgba(217,164,86,.12),rgba(217,164,86,0) 60%),var(--surface)}
+.cup h2{font-family:var(--serif);font-size:1.15rem;margin:0 0 10px;letter-spacing:.1em}
+.cup dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:.88rem}
+.cup dt{color:var(--muted)}
+.cup dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+
+/* drawers */
+.settings{display:flex;flex-direction:column;gap:8px}
+.settings>.legend{margin-bottom:2px}
+.drawer{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.drawer summary{list-style:none;display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
+.drawer summary::-webkit-details-marker{display:none}
+.drawer summary em{font-style:normal;margin-left:auto;font-size:.85rem;color:var(--ink);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer summary::after{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);margin:-3px 2px 0 4px;transition:transform .2s;flex:none}
+.drawer[open] summary::after{transform:rotate(-135deg);margin-top:3px}
+.drawer .body{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.info{margin:0;font-size:.8rem;color:var(--muted);line-height:1.6}
+.info b{color:var(--ink);font-weight:600}
+.range{display:grid;grid-template-columns:3em 1fr 4.4em;align-items:center;gap:10px}
+.range label{font-size:.88rem}
+.range input{width:100%;accent-color:var(--crema)}
+.range output{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.82rem;color:var(--muted)}
+
+/* immersive while sound is running */
+body.running .settings,body.running .notes,body.running .foot,body.running .scale .sub,body.running #bleConnect,body.running #bleAll{display:none}
+
+/* notes */
+.foot{margin:0;color:var(--muted);font-size:.78rem}
+.notes{border-top:1px solid var(--line);padding-top:6px;font-size:.85rem}
+.notes>summary{cursor:pointer;color:var(--muted);padding:8px 0;font-size:.82rem;letter-spacing:.08em}
+.notes h2{font-family:var(--serif);font-size:1.05rem;margin:10px 0 6px}
+.notes h3{font-size:.9rem;margin:14px 0 6px;color:var(--crema)}
+.notes ul,.notes ol{margin:0;padding-left:1.3em}
+.notes li{margin:4px 0;color:var(--muted)}
+.notes li b{color:var(--ink)}
+.notes details.old{margin-top:14px;border-top:1px dashed var(--line);padding-top:8px}
+.notes details.old>summary{cursor:pointer;color:var(--muted);font-size:.8rem}
+@media (prefers-reduced-motion:reduce){.bar i,.stamp,.drawer summary::after{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>一杯咖啡的样子</h1>
+    <span class="ver"><b>v4.2</b> · <span id="verGenre">旋律电子</span></span>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="俯视粉床的注水动画"></canvas>
+    <div class="stamp" id="stamp">注水即作曲<small>WEIGHT → MUSIC</small></div>
+  </div>
+
+  <div class="read" aria-live="off">
+    <div><span>重量</span><output id="rG">0<small>g</small></output></div>
+    <div><span>流速</span><output id="rF">0.0<small>g/s</small></output></div>
+    <div><span>时间</span><output id="rT">0:00</output></div>
+  </div>
+  <div class="where">
+    <span class="seglbl" id="segLbl">准备</span>
+    <span class="bar" title="离目标水量的进度"><i id="segBar"></i></span>
+    <span class="note" id="note">—</span>
+  </div>
+  <p class="why" id="why">每个音的由来会显示在这里</p>
+
+  <section class="cup" id="cup" hidden>
+    <h2>这一杯</h2>
+    <dl id="cupList"></dl>
+  </section>
+
+  <section class="scale" aria-label="Bookoo 秤">
+    <h2>BOOKOO 秤</h2>
+    <div class="main">
+      <button id="bleConnect">连接秤</button>
+      <button id="bleAll" hidden>显示所有蓝牙设备</button>
+      <button id="bleTare" disabled>清零</button>
+      <button id="brewStart" class="primary" disabled>准备（注水自动开始）</button>
+      <button id="brewEnd" disabled>结束</button>
+    </div>
+    <p class="status" id="bleStatus">未连接。安卓或电脑请用 Chrome；iPhone 请用 Bluefy 浏览器打开本页面。</p>
+    <div class="sub">
+      <div class="seg mini" id="startMode">
+        <button data-m="auto" aria-pressed="true">注水自动开始</button>
+        <button data-m="click" aria-pressed="false">点击开始</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="smoothChk"> 使用秤端流速平滑（更稳，但反应更慢）</label>
+      <details id="rawBox"><summary>原始数据</summary><pre id="raw">还没有收到数据</pre></details>
+      <button class="ghost" id="exportCsv" hidden>导出上一杯数据（CSV）</button>
+    </div>
+  </section>
+
+  <div class="transport">
+    <button class="play" id="play">播放</button>
+    <button class="ghost" id="again" aria-label="从头播放">从头</button>
+    <small>没连秤时试听预设</small>
+    <div class="seg mini" id="speeds">
+      <button data-s="1" aria-pressed="true">1×</button>
+      <button data-s="2" aria-pressed="false">2×</button>
+      <button data-s="4" aria-pressed="false">4×</button>
+    </div>
+  </div>
+
+  <section class="settings" aria-label="设置">
+    <span class="legend">已调好</span>
+    <details class="drawer" id="dGenre">
+      <summary><b>风格</b><em id="sGenre">旋律电子</em></summary>
+      <div class="body">
+        <div class="seg" id="genres">
+          <button data-g="walker" aria-pressed="true">旋律电子</button>
+          <button data-g="techno" aria-pressed="false">暗黑 Techno</button>
+          <button data-g="house" aria-pressed="false">House</button>
+          <button data-g="trance" aria-pressed="false">Trance</button>
+          <button data-g="dnb" aria-pressed="false">Drum &amp; Bass</button>
+          <button data-g="dubstep" aria-pressed="false">Dubstep</button>
+        </div>
+        <p class="info" id="genreInfo"></p>
+      </div>
+    </details>
+    <details class="drawer" id="dScale">
+      <summary><b>产地音阶</b><em id="sScale">云南</em></summary>
+      <div class="body">
+        <div class="seg" id="scales"></div>
+        <p class="info" id="info"></p>
+      </div>
+    </details>
+    <details class="drawer" id="dPreset">
+      <summary><b>注水方式</b><em id="sPreset">三段式</em></summary>
+      <div class="body">
+        <div class="seg" id="presets">
+          <button data-p="three" aria-pressed="true">三段式</button>
+          <button data-p="four" aria-pressed="false">四段注水</button>
+          <button data-p="one" aria-pressed="false">一刀流</button>
+          <button data-p="pulse" aria-pressed="false">脉冲注水</button>
+          <button data-p="other" aria-pressed="false">上限冲法<small>50 → 155 → 250</small></button>
+        </div>
+        <p class="info">没连秤时用来试听的模拟曲线；连秤后以真实注水为准。</p>
+      </div>
+    </details>
+    <details class="drawer" id="dVol">
+      <summary><b>音量</b><em id="sVol">22 / 60 / 85</em></summary>
+      <div class="body">
+        <div class="range"><label for="v1">一段</label><input type="range" id="v1" min="0" max="100" step="1" value="22"><output id="v1v">22%</output></div>
+        <div class="range"><label for="v2">二段</label><input type="range" id="v2" min="0" max="100" step="1" value="60"><output id="v2v">60%</output></div>
+        <div class="range"><label for="v3">三段</label><input type="range" id="v3" min="0" max="100" step="1" value="85"><output id="v3v">85%</output></div>
+        <p class="info">冲煮中拖动会立即生效。攀升和顶点会在第三段的基础上再推高约三到四成。</p>
+        <label class="chk"><input type="checkbox" id="phoneMode" checked> 手机外放模式（给低频加泛音，手机喇叭也听得到底鼓和低音；接音箱或耳机可关掉）</label>
+      </div>
+    </details>
+    <details class="drawer" id="dTarget">
+      <summary><b>目标水量</b><em id="sTarget">240 g</em></summary>
+      <div class="body">
+        <div class="range"><label for="target">目标</label><input type="range" id="target" min="150" max="400" step="5" value="240"><output id="targetv">240 g</output></div>
+        <p class="info">第三段按你的流速预估时间：顶点约在结束前 13 秒，持续约 7 秒；过了顶点停手进入结尾，一声锣。</p>
+      </div>
+    </details>
+  </section>
+
+  <div hidden>
+    <div class="seg" id="styles">
+      <button data-y="techno" aria-pressed="true">暗黑 Techno</button>
+      <button data-y="edm" aria-pressed="false">电音</button>
+      <button data-y="lofi" aria-pressed="false">Lo-fi</button>
+      <button data-y="acoustic" aria-pressed="false">原声</button>
+    </div>
+    <input type="checkbox" id="crackle">
+    <input type="range" id="fmin" min="0" max="9.5" step="0.5" value="2"><output id="fminv">2.0 g/s</output>
+    <input type="range" id="fmax" min="0.5" max="10" step="0.5" value="6"><output id="fmaxv">6.0 g/s</output>
+  </div>
+
+  <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
+
+  <details class="notes">
+    <summary>版本说明 · v4.2</summary>
+    <h2>v4.2</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>界面重做（深色）</b>：咖啡黑底、油脂琥珀色；粉床下方是大号读数（重量 / 流速 / 时间），以及当前段落和离目标水量的进度。</li>
+      <li><b>冲煮时沉浸</b>：声音开始后，设置、说明全部收起，只留粉床、读数和"结束"；停下或冲完后再出现。冲煮中屏幕保持常亮（浏览器允许时）。</li>
+      <li><b>粉床外圈是进度环</b>：按目标水量走满一圈；注水时外圈随流速发光。</li>
+      <li><b>"这一杯"卡片</b>：结尾一声锣后显示总水量、用时、平均流速、BPM、调和和弦，可以截图。</li>
+      <li><b>绿点 = 已调好</b>：旋律电子、暗黑 Techno、云南带绿点；其他能用，但未细调。</li>
+      <li><b>设置收进抽屉</b>：风格、产地音阶、注水方式、音量、目标水量，标题右侧显示当前选择。</li>
+      <li><b>iPhone</b>：提示用 Bluefy 浏览器打开（Safari / iPhone 版 Chrome 不支持网页蓝牙）。</li>
+      <li>音乐与算法与 v4.1 完全相同。</li>
+    </ul>
+    <h3>核心功能</h3>
+    <ul>
+      <li>连接 Bookoo 秤（网页蓝牙），实时读取重量与流速，每秒约 11 次；清零；注水自动开始或点击开始；结束后可回放、导出 CSV。</li>
+      <li>旋律电子（默认）：前奏 → 律动 → Drop 与顶点 → 一声锣；暗黑 Techno 等可切换。</li>
+      <li>换段：停手超过 3 秒且累计 30 g / 110 g（随目标缩放）；3 秒内是换气；等待时只有心跳，没有旋律。</li>
+    </ul>
+    <h3>音乐产生算法（旋律电子）</h3>
+    <ol>
+      <li>闷蒸约 2 秒时的平均流速决定速度（88–100 BPM）和调；手的起伏决定和弦循环（四组之一）。</li>
+      <li>主旋律逐小节边冲边定：每小节由当下的手选三种句型之一，按所选产地音阶的级数写出；8 小节后整杯沿用。</li>
+      <li>第一段平均流速决定主奏用拨弦还是钢琴。</li>
+      <li>顶点只在第三段，约 7 秒，放在倒水结束前约 13 秒；之前约 0.45 秒静音。</li>
+      <li>没有随机：同样的数据永远得到同一首曲子。</li>
+    </ol>
+    <details class="old"><summary>更早的版本（v4.1 – v3.8）</summary>
+    <h3>v4.1</h3>
+    <ul>
+      <li><b>清零按钮</b>：连上秤后随时归零（去皮），不开始冲煮。</li>
+      <li><b>两种开始方式</b>：默认"注水自动开始"——按"准备"会先清零，1 秒后开始检测，连续两次读到重量 ≥ 2 g 且流速 ≥ 0.4 g/s 就自动开始音乐与秤的计时；也可切到"点击开始"。</li>
+      <li><b>旋律电子可用产地音阶</b>：旋律句型改为按音阶级数书写，选哪个音阶就套用哪个。云南五声是专门调好的；其他音阶可用但未细调；爪哇 Slendro 不在十二平均律上，在旋律电子下停用（暗黑 Techno 仍可用）。</li>
+    </ul>
+    <h3>v4.0</h3>
+    <ul>
+      <li><b>新的音乐引擎：旋律化电子</b>（参考 Alan Walker 一类旋律电子的写法），默认开启；暗黑 Techno 等仍可切换。前奏（钢琴慢版旋律）→ 律动（底鼓、贝斯、完整旋律）→ Drop（宽厚和弦、合唱、抽吸感）与顶点 → 一声锣。</li>
+      <li><b>每杯不同、没有随机</b>：闷蒸开始约 2 秒，用当时的平均流速决定速度（88–100 BPM）和调（C / D / A / B♭ 小调），用手的起伏决定和弦循环（四组小调循环之一）；主旋律逐小节"边冲边定"，每一小节由当下的手选三种句型之一，8 小节选完后整杯沿用；第一段的平均流速决定主奏用拨弦还是钢琴。</li>
+      <li><b>等待（间奏）</b>：没有旋律，只有闷闷的长和弦和心跳，停手 12 秒后才蓄力。</li>
+      <li>沿用 v3.16：换段规则（停手 > 3 秒且累计 30 g / 110 g）、换气、第三段的攀升与顶点（约 7 秒，结束前约 13 秒）、一声锣结尾、三段音量、手机外放模式、Bookoo 连接。</li>
+    </ul>
+    <h3>v3.16</h3>
+    <ul>
+      <li><b>段落切换更确定</b>：停手超过 3 秒，且累计水量达到标准（雨林→山寨 30 g，山寨→火塘 110 g，随目标水量等比例缩放），下一次注水才进入下一段并敲锣报段。</li>
+      <li><b>短暂停顿是"换气"</b>：停手 3 秒以内，音乐稍微变轻但不中断，不敲锣、不重新开始，水回来无缝接上。（第三段过了顶点后停手 0.6 秒仍会直接敲终止锣。）</li>
+      <li><b>停超过 3 秒但水量未到标准</b>：进入水下等待（心跳），再注水时继续同一段，不敲锣、不换段。</li>
+    </ul>
+    <h3>v3.15</h3>
+    <ul>
+      <li><b>结尾只有一声锣</b>：停手 0.6 秒、静音 0.25 秒后，只敲一声大锣，起音清脆有力，余音约 5 秒逐渐减弱后完全安静；去掉同时响的和弦、底鼓、超低频、葫芦丝和玻璃钟声，结尾不再区分是否命中目标。</li>
+    </ul>
+    <h3>v3.14</h3>
+    <ul>
+      <li><b>手机外放模式（默认开）</b>：手机喇叭放不出 200 Hz 以下的声音，所以底鼓、低频、超低频在手机上几乎听不到。现在把低频复制一份、加上泛音，叠在 200–1100 Hz，手机上也听得出底鼓和低音；接音箱或耳机时可以关掉。</li>
+      <li><b>等待的心跳更清楚</b>：不再跟段落音量走，固定音量；主体改为手机放得出的中低频"咚"，带一点"啪"的起音。</li>
+      <li><b>结尾的"咚"更大、余音约 5 秒</b>：这一击单独提高音量，加入中频的大锣、带"啪"声的底鼓和更亮的和弦，适度混响，约 5 秒后完全安静；连秤时约 6.5 秒后自动存档。</li>
+    </ul>
+    <h3>v3.13</h3>
+    <ul>
+      <li><b>等待时没有旋律</b>：两次停手等待只剩心跳、很轻的雨声和持续音，停手 12 秒后才轻轻出现蓄力声；停手瞬间的葫芦丝回声也去掉了。</li>
+      <li><b>结尾更干脆</b>：停手 0.6 秒 → 静音 0.25 秒 → 一击（底鼓、超低频、大锣、全体和弦）→ 约 3 秒内完全安静，混响大幅减少；连秤时约 4.5 秒后自动存档。</li>
+      <li><b>默认云南音阶</b>：音阶按钮的选中状态与实际默认一致（云南 · 中国五声羽调），其他音阶和电音类型仍可切换。</li>
+    </ul>
+    <h3>v3.12</h3>
+    <ul>
+      <li><b>第一段和等待时旋律更清楚</b>：雨林段葫芦丝音量约加倍、少混响；长和弦、低频、持续音、雨声约减半。等待时旋律不再沉到水下，葫芦丝清楚地吹动机（两小节一句、两小节休息），心跳更明显；蓄力声更轻，停手 12 秒后才开始上升。</li>
+      <li><b>高潮更强、更早</b>：顶点放在倒水结束前约 13 秒（每秒 4 g 时约 188 g）；攀升最后约三成抽掉底鼓和低频，只留蓄力与小军鼓；顶点新增超低频下坠、合唱和声、底鼓加倍密度、葫芦丝三个八度、画面随拍闪光；全开约 7 秒，落地约 6 秒。</li>
+      <li><b>结束更明确</b>：停手 1 秒后全部静音半秒，再一记最大的终止声（大锣、超低频、主音和弦齐奏），之后没有任何鼓和旋律，只让这一声慢慢消失约 5 秒。屏幕"终"字与总结（总水量、用时、平均流速、动机）一直保留。</li>
+    </ul>
+    <h3>v3.11</h3>
+    <ul>
+      <li><b>模拟预设改为 240 g</b>：三段式 40 → 140 → 240 g；新增"上限冲法"50 → 155 → 250 g；预设跟随目标水量滑杆等比例缩放。</li>
+      <li><b>攀升、顶点、结尾只在第三段发生</b>：前两段倒多少、停多久都只会沉到水下等待。</li>
+      <li><b>去掉所有提醒</b>：不再有倒数提示音、240 g 的锣和"停"、过量走调。</li>
+      <li><b>终止声</b>：第三段过了顶点后停手 1 秒，大锣、低频重击与全体主音和弦齐奏一声，屏幕"终"，约 1 秒后进入余温。</li>
+      <li><b>230–250 g 都算完满</b>：结尾落回主音；范围之外停在悬而未决的音上。</li>
+      <li><b>顶点约 7 秒</b>：顶点放在倒水结束前约 10 秒，全开保持 4 小节。</li>
+    </ul>
+    <h3>v3.10</h3>
+    <ul>
+      <li><b>去掉和弦里的"气声"</b>：长和弦里原本有一条窄带噪声，从注水第一秒起持续发出"siii"声，压在葫芦丝主旋律的音区上。三段全部移除。</li>
+      <li><b>雨声再调轻</b>：雨林段雨声约为上一版的一半。</li>
+    </ul>
+    <h3>v3.9</h3>
+    <ul>
+      <li><b>去掉雨林段刺耳的"嘀嘀"声</b>：原本的雨滴和粉床冒泡是高频的正弦"啾"声，密度高、穿透力强。改成低沉、稀疏的水滴声，雨声也调暗调轻。</li>
+      <li><b>到达目标前倒数</b>：离目标还差 5 g 起，每多 1 g 响一声玻璃钟，最后 1 g 音高跳上去；到达目标时一声锣、屏幕显示"停"。</li>
+      <li><b>超过目标听得出来</b>：超出 2 g 后，葫芦丝的持续音开始走调，底下浮出一个半音的不和谐音，声音变闷；超得越多越明显（最多按 25 g 计）。结尾仍按 ±6 g 判定是否完满。</li>
+    </ul>
+    <h3>v3.8</h3>
+    <ul>
+      <li>顶点主奏限制在 A3–A5、音量随攀升提高；顶点和弦降八度调轻；压缩器改温和。三段基础音量滑杆。页面底部加入版本说明。</li>
+    </ul>
+    <h3>核心功能</h3>
+    <ul>
+      <li>连接 Bookoo 秤（Chrome 网页蓝牙），实时读取重量与流速，每秒约 11 次；开始冲煮自动去皮计时，结束后可回放、导出 CSV。</li>
+      <li>云南 × 暗黑：三段式各有角色——<b>雨林</b>（无节拍，雨声、葫芦丝）、<b>山寨</b>（象脚鼓、铓锣）、<b>火塘</b>（电子底鼓、失真、转调）；一、二、三声锣报段，画面青绿、土红、橙金。</li>
+      <li>按流速预估时间的<b>顶点</b>，之后按克数一层层<b>落地</b>，停手 1 秒进入约 8 秒的<b>余温</b>收尾。</li>
+      <li>停手时沉到水下：音乐压到很轻很闷，蓄力随等待时间上升，下一次注水时释放。</li>
+    </ul>
+    <h3>音乐如何由数据产生（以下为暗黑 Techno 引擎；旋律电子引擎见本版重点）</h3>
+    <ol>
+      <li><b>有没有水与分段</b>：流速 ≥ 0.4 g/s 视为注水。停手 3 秒以内是换气，音乐继续；停手超过 3 秒且累计水量达到标准（30 g、110 g，按目标缩放）再注水，才算新的一段（最多三段），否则继续同一段。停手等待时没有旋律，只有心跳、很轻的雨声和持续音，12 秒后蓄力声才出现。</li>
+      <li><b>你的中心流速</b>：每段注水 1 秒后开始取样；前 12 个节拍的平均值定为中心，之后以约 12 秒的时间常数缓慢跟随你的手。</li>
+      <li><b>轻 / 中 / 猛</b>：流速相对中心 ±1.2 g/s 映射到 0–100%，平滑后分三档（有防抖），决定乐器层数与装饰音。</li>
+      <li><b>速度</b>：雨林 108、山寨 118、火塘 132 BPM，每段内部恒定，十六分音符为最小单位，每段第一拍对齐水落下的瞬间。</li>
+      <li><b>动机（每杯不同）</b>：雨林段注水 0.6 秒后，每一拍取当下流速档位（0–4）加上手的细微起伏（流速减去 1 秒平均值，每 0.08 g/s 一级，最多 ±2），写成一个音；相邻两音最多相差 3 级，连续三个相同则按流速走向挪一步。6 个音即这一杯的动机。</li>
+      <li><b>节奏型</b>：由中心流速选三种之一，每种 6 个音加若干休止，共 2 小节。</li>
+      <li><b>乐句</b>：4 小节一句，前 2 小节"问句"结尾停在不稳定音，后 2 小节"答句"落回主音。每句开始时：近 1.5 秒平均流速比中心快 0.5 g/s 就上移一级（−2 到 +3）；1.5 秒内流速下降超过 0.3 g/s 就把动机倒影。</li>
+      <li><b>和弦</b>：每段从两组和弦进行中选一组（由动机决定），每两小节换一次。</li>
+      <li><b>攀升与顶点（只在第三段）</b>：第三段开始时用中心流速估算：顶点 = 目标 − 13 秒的水量（30–65 g 之间），攀升起点 = 顶点 − 10 秒的水量（至少比当时克数多 4 g）。攀升按克数推高蓄力、小军鼓密度、动机音区与主奏音量；到顶点前约半秒全部静音；顶点三锣齐响，全开保持 4 小节（约 7 秒），再按克数分四步落地到目标。</li>
+      <li><b>结尾（只在第三段）</b>：过了顶点（或已达目标 −10 g）停手 1 秒，停手 0.6 秒后静音 0.25 秒，只敲一声大锣，余音约 5 秒逐渐减弱后完全安静。</li>
+      <li><b>没有随机</b>：除了混响的质感，所有音符、节奏和段落都只由这杯的重量与流速决定；同样的数据永远得到同一首曲子。</li>
+    </ol>
+    </details>
+  </details>
+</main>
+<script>
+const DT=0.1, MAXF=8, THR=0.4;
+const SCALES={
+ phrygian:{name:'Phrygian · 暗夜',origin:'不属于产区 · 神秘感最强',deg:[0,1,3,5,7,8,10],notes:'C D♭ E♭ F G A♭ B♭',meter:'duple',meterName:'电音中统一四拍',basis:'调式',why:'第二音只比主音高半音（D♭→C），这个半音的拉扯就是"神秘、危险、东方"的来源；和弦在 i 与 ♭II 之间摇摆。'},
+ insen:{name:'In 音阶 · 幽冷',origin:'日本 · 不属于产区',deg:[0,1,5,7,10],notes:'C D♭ F G B♭',meter:'duple',meterName:'电音中统一四拍',basis:'调式',why:'日本传统五声"阴音阶"，同样带主音上方的半音，比 Phrygian 更空、更冷。'},
+ yunnan:{name:'中国五声 · 羽调',origin:'云南 普洱／保山／德宏',deg:[0,3,5,7,10],notes:'C E♭ F G B♭（羽调式五声）',meter:'duple',meterName:'电音中统一四拍',basis:'借用',why:'云南咖啡主产区多为傣、哈尼、佤等民族聚居，具体调式尚未考证；这里用中国五声的羽调式，暗而有东方味，最适合暗色电音。'},
+ alishan:{name:'鄒族五声',origin:'台湾阿里山',deg:[0,2,4,7,9],notes:'C D E G A',meter:'triple',meterName:'三拍子',basis:'依据扎实',why:'鄒族旋律以五声音阶和自然和弦为主，祭歌、舞歌的三拍子为台湾其他原住民族所无。'},
+ yirga:{name:'Tizita 小调',origin:'埃塞 耶加雪菲／西达摩',deg:[0,2,3,7,8],notes:'C D E♭ G A♭',meter:'duple',meterName:'二拍子',basis:'借用',why:'qenet 调式源自北部阿姆哈拉，南部咖啡产区借用。'},
+ geisha:{name:'Tizita 小调 → 大调',origin:'巴拿马 瑰夏',deg:[0,2,3,7,8],deg2:[0,2,4,5,7,9,11],glide:true,notes:'闷蒸 C D E♭ G A♭ → 注水 C D E F G A B',meter:'tresillo',meterName:'闷蒸二拍 → 注水 3-3-2 切分（参考 tamborito，未细考）',basis:'叙事',why:'闷蒸用埃塞 Tizita 小调，第一段正式注水起转入巴拿马的西班牙式大调，并加入 saloma 式的上滑人声感：一杯里听见瑰夏从埃塞森林走到巴拿马火山坡。'},
+ huila:{name:'班布科大调',origin:'哥伦比亚 慧兰',deg:[0,2,4,5,7,9,11],notes:'C D E F G A B',meter:'bambuco',meterName:'3/4 与 6/8 交错，强拍留空',basis:'依据扎实',why:'全国班布科民俗节在慧兰首府内瓦举办；班布科旋律多为大小调，特色在节拍。'},
+ java:{name:'Slendro',origin:'印尼 爪哇',deg:[0,2.4,4.8,7.2,9.6],notes:'五个近乎等距的音（非十二平均律）',meter:'duple',meterName:'二拍子',basis:'依据扎实',why:'甘美兰调律不属于西方平均律，且每套乐器调律各不相同。'}
+};
+let scale=SCALES.yunnan;
+let FMIN=2, FMAX=6;
+const NAMES=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+function rng(seed){return()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+/* realistic kettle pour as seen by a scale:
+   soft start (~0.6 s) and taper (~0.45 s), slow hand drift, small wobble from circular pouring,
+   then the scale's own response lag (~0.35 s) and sensor noise; each pour lands on its exact grams */
+function fromPours(pours,end,seed=11){
+  const R=rng(seed), n=Math.round(end/DT)+1, raw=new Float64Array(n);
+  pours.forEach(([s,d,gr],pi)=>{
+    const c=new Float64Array(n); let walk=0, sum=0, ph=R()*6;
+    for(let i=0;i<n;i++){const t=i*DT; walk+=(R()-.5)*.07; walk*=.96;
+      if(t<s||t>=s+d) continue;
+      const up=smooth((t-s)/.6), dn=smooth((s+d-t)/.45);
+      const body=1+walk+.05*Math.sin(2*Math.PI*t/1.25+ph)+.03*(R()-.5);
+      c[i]=Math.max(0,(gr/d)*up*dn*body); sum+=c[i]*DT;}
+    const k=gr/(sum||1); for(let i=0;i<n;i++) raw[i]+=c[i]*k;
+  });
+  const flow=new Float64Array(n), weight=new Float64Array(n), a=1-Math.exp(-DT/.35);
+  let y=0, acc=0;
+  for(let i=0;i<n;i++){ y+=(raw[i]-y)*a; acc+=raw[i]*DT; weight[i]=acc;
+    flow[i]= y>.3 ? Math.max(0,y+(R()-.5)*.12) : (y<.05?0:y); }
+  return {flow,weight,dur:end,total:acc};
+}
+const PRESETS={};
+function buildPresets(k){ // k = target / 240
+  const sc=a=>a.map(([s_,d,g_])=>[s_,d,g_*k]);
+  const pulses=[[0,8,36]]; for(let i=0;i<8;i++) pulses.push([35+i*12,5,25.5]);
+  PRESETS.three=fromPours(sc([[0,9,40],[35,28,100],[75,30,100]]),150,5);
+  PRESETS.other=fromPours(sc([[0,12,50],[33,26,105],[72,27,95]]),150,29);
+  PRESETS.four=fromPours(sc([[0,8,40],[35,12,62],[60,12,62],[85,12,76]]),150);
+  PRESETS.one=fromPours(sc([[0,8,36],[35,66,204]]),150);
+  PRESETS.pulse=fromPours(sc(pulses),150);
+}
+buildPresets(1);
+let data=PRESETS.three, speed=1, t=0, playing=false, last=0;
+function pourPoint(time){const rr=.12+.4*(.5+.5*Math.sin(time*.55-Math.PI/2));const a=time*2.1;return [Math.cos(a)*rr,Math.sin(a)*rr];}
+function sample(time){const i=Math.min(data.flow.length-1,Math.max(0,Math.round(time/DT)));return {f:data.flow[i],w:data.weight[i]};}
+function degs(){return (scale.deg2&&seg>=2)?scale.deg2:scale.deg;}
+const midiOf=idx=>{const d=degs(),n=d.length;return 60+12*Math.floor(idx/n)+d[((idx%n)+n)%n];};
+const hz=m=>440*Math.pow(2,(m-69)/12);
+
+/* ---------- audio ---------- */
+let ctx,bus,drone,droneUpper,nextTick=0,tick=0,ema=0,cur=0,seg=0,wasPouring=false,quiet=99,lastNote=null;
+let TICK=.115, STYLE='techno'; const PAT=[0,2,1,3,0,2,4,1], SEGDEG=[0,3,1,4];
+function impulse(sec,decay){const len=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(2,len,ctx.sampleRate);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);}return b;}
+function initAudio(){
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const master=ctx.createGain();MASTER=master;master.gain.value=.9;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.knee.value=12;comp.attack.value=.01;comp.release.value=.2;
+  master.connect(comp);comp.connect(ctx.destination);COMP=comp;
+  { const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=170;const sh=ctx.createWaveShaper();const n=1024,cv=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;cv[i]=Math.tanh(6*x);}sh.curve=cv;
+    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=200;const lp2=ctx.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=1100;
+    PHONEG=ctx.createGain();PHONEG.gain.value=PHONE?.55:0;master.connect(lp);lp.connect(sh);sh.connect(hp);hp.connect(lp2);lp2.connect(PHONEG);PHONEG.connect(comp); }
+  const rev=ctx.createConvolver();rev.buffer=impulse(3.2,2.6);const wet=ctx.createGain();wet.gain.value=.42;rev.connect(wet);wet.connect(master);REV=rev;
+  bus=ctx.createGain();bus.connect(master);bus.connect(rev);
+  drumBus=ctx.createGain();drumBus.gain.value=1;drumBus.connect(master);
+  const ds=ctx.createGain();ds.gain.value=.12;drumBus.connect(ds);ds.connect(rev);
+  noiseBuf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*.25),ctx.sampleRate);
+  {const d=noiseBuf.getChannelData(0);let x=12345;for(let i=0;i<d.length;i++){x=(x*1103515245+12345)&0x7fffffff;d[i]=x/0x3fffffff-1;}}
+  // drone: tonic pedal + one moving chord tone
+  drone=ctx.createGain();drone.gain.value=0;
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;lp.Q.value=.6;
+  const lfo=ctx.createOscillator();lfo.frequency.value=.08;const lfoG=ctx.createGain();lfoG.gain.value=160;lfo.connect(lfoG);lfoG.connect(lp.frequency);lfo.start();
+  [[36,-4],[36,5],[43,0]].forEach(([m,det])=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=hz(m);o.detune.value=det;o.connect(lp);o.start();});
+  droneUpper=ctx.createOscillator();droneUpper.type='triangle';droneUpper.frequency.value=hz(48);
+  const ug=ctx.createGain();ug.gain.value=.5;droneUpper.connect(ug);ug.connect(lp);droneUpper.start();
+  lp.connect(drone);drone.connect(master);drone.connect(rev);
+}
+let drumBus,noiseBuf;
+function drum(type,when,v){
+  const g=ctx.createGain();g.connect(drumBus);
+  if(type==='kick'){const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(150,when);o.frequency.exponentialRampToValueAtTime(42,when+.16);
+    g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.35);o.connect(g);o.start(when);o.stop(when+.4);}
+  else if(type==='shaker'){const n=ctx.createBufferSource();n.buffer=noiseBuf;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=6500;
+    g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.003);g.gain.exponentialRampToValueAtTime(.0001,when+.07);n.connect(hp);hp.connect(g);n.start(when);n.stop(when+.1);}
+  else if(type==='clave'){const o=ctx.createOscillator();o.type='triangle';o.frequency.value=1750;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1750;bp.Q.value=4;
+    g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.002);g.gain.exponentialRampToValueAtTime(.0001,when+.09);o.connect(bp);bp.connect(g);o.start(when);o.stop(when+.12);}
+}
+function droneTo(on){ if(ctx) drone.gain.setTargetAtTime(on?.055:0,ctx.currentTime,on?.06:.08); }
+function pluck(m,vel,when,pan,glide,dur){dur=dur||1.8;
+  const f=hz(m),env=ctx.createGain(),p=ctx.createStereoPanner?ctx.createStereoPanner():null;
+  env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(vel,when+.006);env.gain.exponentialRampToValueAtTime(.0001,when+dur);
+  const shim=ctx.createGain();shim.gain.setValueAtTime(vel*.35,when);shim.gain.exponentialRampToValueAtTime(.0001,when+.35);
+  [[1,1],[2,.28]].forEach(([r,a])=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';if(glide){o.frequency.setValueAtTime(f*r*.89,when);o.frequency.exponentialRampToValueAtTime(f*r,when+.1);}else o.frequency.value=f*r;g.gain.value=a;o.connect(g);g.connect(env);o.start(when);o.stop(when+dur+.1);});
+  const o3=ctx.createOscillator();o3.type='sine';o3.frequency.value=f*4.17;o3.connect(shim);shim.connect(env);o3.start(when);o3.stop(when+.4);
+  if(p){p.pan.value=Math.max(-.8,Math.min(.8,pan||0));env.connect(p);p.connect(bus);}else env.connect(bus);
+}
+function setDrone(){ if(!ctx)return; const D=degs(),d=D[chordRoot()%D.length];droneUpper.frequency.setTargetAtTime(hz(48+d),ctx.currentTime,.9);}
+/* ---------- melody engine: data performs, rules compose ----------
+   · each pour is a phrase; when the pour stops the melody walks home to the tonic (cadence)
+   · flow trend (speeding up / slowing down) sets melodic direction; flow level only pulls the register
+   · mostly stepwise, occasional leaps, a leap is followed by a step back
+   · strong beats and sub-phrase ends land on chord tones; each phrase gets its own chord, resolving home at the end */
+let nextTickD=0,dripT=null,dripGap=1.2,dripIdx=0,lastNoteT=-9,pos=4,lastInt=0,inPhrase=false,cadence=[],noteCount=0,emaN=0;
+const PROG5=[0,3,1,4],PROG7=[0,3,4,5];
+function chordRoot(){const n=degs().length,P=n===7?PROG7:PROG5;return P[((seg-1)%P.length+P.length)%P.length];}
+function isChordTone(idx){const n=degs().length,d=(((idx-chordRoot())%n)+n)%n;return n===7?(d===0||d===2||d===4):(d===0||d===2||d===3);}
+function nearestChordTone(idx,dir){dir=dir||1;for(const k of [0,dir,-dir,2*dir,-2*dir]) if(isChordTone(idx+k)) return idx+k; return idx;}
+function spanNow(){return Math.round(degs().length*2.4);}
+function centerIdx(){return 1+emaN*(spanNow()-3);}
+function buildCadence(){
+  const n=degs().length; let home=Math.floor(pos/n)*n; if(pos-home>n/2+1) home+=n;
+  const path=[]; let p=pos;
+  if(p===home) return [p+1,p];
+  if(Math.abs(home-p)>3){p=home+(p>home?2:-2);path.push(p);}
+  while(p!==home){p+=p>home?-1:1;path.push(p);}
+  return path;
+}
+function resolveDrone(){ if(ctx) droneUpper.frequency.setTargetAtTime(hz(48+degs()[0]),ctx.currentTime,.9); }
+function play(idx,v,when,dur){
+  const [x]=pourPoint(t); pluck(midiOf(idx),v,when,x,scale.glide&&seg>=2,dur); lastNote=idx;lastNoteT=t;
+  const {f}=sample(t),[px,py]=toPx(pourPoint(t));
+  rings.push({x:px,y:py,r:S*.01,max:S*(.05+.12*Math.min(1,Math.max(f,2)/MAXF))*(dur>2?1.4:1),life:1});
+}
+const whyEl=document.getElementById('why');
+function explain(txt){whyEl.textContent=txt;}
+function meanFlow(t0,win){let sum=0,k=0;for(let x=t0-win;x<=t0;x+=DT){sum+=sample(Math.max(0,x)).f;k++;}return sum/k;}
+function onTick(when,tD){
+  if(!playing) return;
+  if(STYLE==='edm') return onTickEdm(when,tD);
+  if(STYLE==='lofi') return onTickLofi(when,tD);
+  if(STYLE==='techno') return onTickTechno(when,tD);
+  const {f}=sample(tD), pouring=f>=THR, span=spanNow(), ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  let accent, rest=false; const meter=(scale.deg2&&seg<2)?'duple':scale.meter;
+  if(meter==='triple') accent=tick%3===0;
+  else if(meter==='bambuco'){const p=tick%6; if(p===0) rest=true; accent=(p===2||p===3);}
+  else if(meter==='tresillo'){const p=tick%8; accent=(p===0||p===3||p===6); if(!accent&&f<5) rest=true;}
+  else accent=tick%2===0;
+
+  if(!pouring){
+    if(inPhrase){
+      inPhrase=false; droneTo(false);
+      const n=degs().length; let home=Math.floor(pos/n)*n; if(pos-home>n/2+1) home+=n; pos=home;
+      play(home,.13,when,2.6); resolveDrone(); explain(ts+'　停手：节奏立刻停下，只留一个主音收尾');
+    }
+    return;
+  }
+  // percussion: only while water is flowing
+  {const kv=.5+.35*Math.min(1,f/MAXF), sv=(accent?.09:.05)*(.7+.6*Math.min(1,f/MAXF));
+   if(!rest) drum('shaker',when,sv);
+   if(meter==='triple'){ if(tick%3===0) drum('kick',when,kv); }
+   else if(meter==='bambuco'){const p=tick%6; if(p===2) drum('kick',when,kv); if(p===3||p===5) drum('clave',when,.12);}
+   else if(meter==='tresillo'){const p=tick%8; if(p===0) drum('kick',when,kv); if(p===3||p===6) drum('clave',when,.13);}
+   else { if(tick%4===0) drum('kick',when,kv); else if(tick%4===2) drum('kick',when,kv*.55); }}
+  emaN+=(Math.max(0,Math.min(1,(f-FMIN)/(FMAX-FMIN)))-emaN)*.3;
+  const c=Math.round(centerIdx());
+  if(!inPhrase){
+    inPhrase=true;cadence=[];noteCount=0;lastInt=0;setDrone();droneTo(true);
+    pos=Math.max(0,Math.min(span,nearestChordTone(c,1)));
+    play(pos,.24,when,1.8); explain(ts+'　开始注水 '+f.toFixed(1)+' g/s，从该流速对应音区的和弦音起句'); return;
+  }
+  if(rest) return;
+  if(f<2.2&&!accent) return;
+  noteCount++;
+  if(noteCount%8===0){explain(ts+'　每 8 个音换一口气');return;}
+
+  const d=f-sample(tD-.6).f, ad=Math.abs(d);
+  let dir, size, why;
+  if(Math.abs(lastInt)>=2){dir=-Math.sign(lastInt);size=1;why='刚跳过 '+Math.abs(lastInt)+' 步，按规则反向回一步';}
+  else if(ad<.1){
+    if(pos<c){dir=1;size=1;why='流速稳定（Δ '+d.toFixed(2)+'），向 '+f.toFixed(1)+' g/s 对应的音区靠近';}
+    else if(pos>c){dir=-1;size=1;why='流速稳定（Δ '+d.toFixed(2)+'），向 '+f.toFixed(1)+' g/s 对应的音区靠近';}
+    else {dir=1;size=0;why='流速稳定，已在对应音区，重复当前音';}
+  } else {
+    dir=Math.sign(d); size=ad<.3?1:ad<.6?2:3;
+    why=(d>0?'加速 +':'减速 ')+d.toFixed(2)+' g/s，'+(d>0?'上行 ':'下行 ')+size+' 步';
+  }
+  let next=pos+dir*size;
+  if(accent||noteCount%8===7){const n2=nearestChordTone(next,dir||1); if(n2!==next) why+='，强拍落到和弦音'; next=n2;}
+  if(next<0) next=1; if(next>span) next=span-1;
+  lastInt=next-pos; pos=next;
+  const v=(.15+.12*Math.min(1,f/MAXF))*(accent?1.25:.75);
+  // ornament from the hand's fine wobble around its 1.5 s average
+  const wob=f-meanFlow(tD,1.5);
+  if(accent&&Math.abs(wob)>.1){
+    const g=pos+(wob>0?1:-1); const [x]=pourPoint(t);
+    pluck(midiOf(g),v*.45,when,x,false,.4); play(pos,v,when+.07,1.8);
+    why+='；手抖 '+(wob>0?'+':'')+wob.toFixed(2)+'，加'+(wob>0?'上':'下')+'邻装饰音';
+  } else play(pos,v,when,1.8);
+  explain(ts+'　'+why);
+}
+
+
+/* ---------- electronic mode ----------
+   120 BPM on a 16th-note grid, four-on-the-floor kick with sidechain pumping,
+   claps on 2 and 4, off-beat hats, rolling bass, supersaw lead whose filter opens with flow.
+   Every pour starts with a drop (crash + sub); stopping cuts everything except reverb and echo. */
+let MASTER,REV,COMP,PHONEG,PHONE=true,E=null,flashV=0;
+function edmSetup(){
+  if(E) return; E={};
+  E.duck=ctx.createGain();E.duck.connect(MASTER);
+  const rs=ctx.createGain();rs.gain.value=.22;E.duck.connect(rs);rs.connect(REV);
+  E.delay=ctx.createDelay(1);E.delay.delayTime.value=.375;E.fb=ctx.createGain();E.fb.gain.value=.38;
+  E.delay.connect(E.fb);E.fb.connect(E.delay);const dw=ctx.createGain();dw.gain.value=.32;E.delay.connect(dw);dw.connect(MASTER);
+  E.leadF=ctx.createBiquadFilter();E.leadF.type='lowpass';E.leadF.frequency.value=600;E.leadF.Q.value=7;
+  E.leadF.connect(E.duck);E.leadF.connect(E.delay);
+  E.padF=ctx.createBiquadFilter();E.padF.type='lowpass';E.padF.frequency.value=900;
+  E.padG=ctx.createGain();E.padG.gain.value=0;E.padF.connect(E.padG);E.padG.connect(E.duck);
+  E.pad=[-14,9,-5,16].map(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.detune.value=d;o.connect(E.padF);o.start();return o;});
+  E.bassF=ctx.createBiquadFilter();E.bassF.type='lowpass';E.bassF.frequency.value=520;E.bassF.Q.value=3;E.bassF.connect(E.duck);
+}
+function noiseHit(when,type,freq,q,v,dec,dest){
+  const n=ctx.createBufferSource();n.buffer=noiseBuf;n.loop=true;const fl=ctx.createBiquadFilter();fl.type=type;fl.frequency.value=freq;fl.Q.value=q;
+  const g=ctx.createGain();g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.003);g.gain.exponentialRampToValueAtTime(.0001,when+dec);
+  n.connect(fl);fl.connect(g);g.connect(dest||drumBus);n.start(when);n.stop(when+dec+.05);
+}
+function kickDuck(when,v){
+  drum('kick',when,v); flashV=1;
+  const d=E.duck.gain;d.cancelScheduledValues(when);d.setValueAtTime(.3,when);d.linearRampToValueAtTime(1,when+.24);
+}
+function clap(when,v){[0,.012,.026].forEach((o,i)=>noiseHit(when+o,'bandpass',1500,.9,v*(i===2?1:.6),i===2?.18:.03));}
+function hat(when,v,open){noiseHit(when,'highpass',8000,.7,v,open?.32:.045);}
+function dropHit(when){
+  noiseHit(when,'highpass',4500,.5,.22,1.8);
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(62,when);o.frequency.exponentialRampToValueAtTime(31,when+1.3);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.55,when+.01);g.gain.exponentialRampToValueAtTime(.0001,when+1.6);o.connect(g);g.connect(MASTER);o.start(when);o.stop(when+1.7);
+}
+function lead(m,when,v,dur){
+  const env=ctx.createGain();env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.005);
+  env.gain.setValueAtTime(v*.7,when+dur);env.gain.exponentialRampToValueAtTime(.0001,when+dur+.18);env.connect(E.leadF);
+  [-11,0,11].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=hz(m);o.detune.value=d;o.connect(env);o.start(when);o.stop(when+dur+.25);});
+}
+function bass(m,when,v){
+  const env=ctx.createGain();env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.004);env.gain.exponentialRampToValueAtTime(.0001,when+.16);env.connect(E.bassF);
+  const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=hz(m);o.connect(env);o.start(when);o.stop(when+.2);
+  const sub=ctx.createOscillator();sub.type='sine';sub.frequency.value=hz(m-12);sub.connect(env);sub.start(when);sub.stop(when+.2);
+}
+function padChord(){
+  const D=degs(),n=D.length,r=chordRoot(),offs=n===7?[0,2,4,7]:[0,2,3,5];
+  E.pad.forEach((o,i)=>{const idx=r+offs[i];o.frequency.setTargetAtTime(hz(48+12*Math.floor(idx/n)+D[idx%n]),ctx.currentTime,.03);});
+}
+function ringAt(tD,f,k){const [px,py]=toPx(pourPoint(tD));rings.push({x:px,y:py,r:S*.01,max:S*(.05+.13*Math.min(1,f/MAXF))*k,life:1});}
+function onTickEdm(when,tD){
+  edmSetup();
+  const {f}=sample(tD), pouring=f>=THR, span=spanNow(), n=degs().length, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  if(!pouring){
+    if(inPhrase){inPhrase=false;const c=ctx.currentTime;E.padG.gain.setTargetAtTime(0,c,.12);E.leadF.frequency.setTargetAtTime(350,c,.25);
+      explain(ts+'　停手：鼓、低音、和弦瞬间切断，只剩回声慢慢散去');}
+    return;
+  }
+  const energy=Math.max(0,Math.min(1,(f-FMIN)/(FMAX-FMIN)));
+  emaN+=(energy-emaN)*.15;
+  E.leadF.frequency.setTargetAtTime(450+Math.pow(energy,1.4)*6000,when,.06);
+  E.padF.frequency.setTargetAtTime(500+energy*2600,when,.1);
+  if(!inPhrase){
+    inPhrase=true;noteCount=0;lastInt=0;
+    pos=Math.max(0,Math.min(span,nearestChordTone(Math.round(centerIdx()),1)));
+    dropHit(when);padChord();E.padG.gain.setTargetAtTime(.075,when,.02);
+    explain(ts+'　水落下：Drop！'+f.toFixed(1)+' g/s，滤波器开到 '+Math.round(energy*100)+'%');
+  }
+  const s16=tick%16;
+  if(tick%4===0) kickDuck(when,1);
+  if(s16===4||s16===12) clap(when,.32);
+  if(tick%4===2) hat(when,.11,false); else if(f>4.2&&tick%2===1) hat(when,.045,false);
+  if(f>5&&s16===14) hat(when,.09,true);
+  if(tick%4!==0){const r=chordRoot();bass(36+12*Math.floor(r/n)+degs()[r%n],when,(tick%4===2?.34:.24));}
+  if(tick%2===0){
+    noteCount++;
+    const d=f-sample(tD-.6).f, ad=Math.abs(d), c=Math.round(centerIdx()), accent=tick%4===0;
+    let dir,size,why;
+    if(Math.abs(lastInt)>=2){dir=-Math.sign(lastInt);size=1;why='刚跳过 '+Math.abs(lastInt)+' 步，回一步';}
+    else if(ad<.1){ if(pos<c){dir=1;size=1;} else if(pos>c){dir=-1;size=1;} else {dir=1;size=0;} why='流速稳定，靠向 '+f.toFixed(1)+' g/s 的音区'; }
+    else {dir=Math.sign(d);size=ad<.3?1:ad<.6?2:3;why=(d>0?'加速 +':'减速 ')+d.toFixed(2)+' g/s，'+(d>0?'上行 ':'下行 ')+size+' 步';}
+    let next=pos+dir*size; if(accent) next=nearestChordTone(next,dir||1);
+    if(next<0) next=1; if(next>span) next=span-1; lastInt=next-pos; pos=next;
+    lead(midiOf(pos),when,.075+.05*energy,.16); lastNote=pos; lastNoteT=tD; ringAt(tD,f,accent?1.25:.9);
+    explain(ts+'　'+why+'；滤波器 '+Math.round(energy*100)+'%');
+  } else if(energy>.35){
+    const a=nearestChordTone(pos+2,1); lead(midiOf(a)+12,when,.03+.03*energy,.08);
+  }
+}
+
+
+/* ---------- lo-fi mode ----------
+   80 BPM, swung 16ths, dusty lowpassed drums, electric-piano 6th/9th chords with tape wobble,
+   soft round bass, vinyl crackle. Flow opens the lowpass (soft pour = muffled, strong pour = clear).
+   Stopping the pour = tape stop: the chord bends down an octave and dies. */
+let L=null, barN=0, crackleOn=false;
+function crackleBuf(){const len=ctx.sampleRate*2,b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0);let x=987654;
+  for(let i=0;i<len;i++){x=(x*1103515245+12345)&0x7fffffff;const r=x/0x7fffffff;x=(x*1103515245+12345)&0x7fffffff;const q=x/0x3fffffff-1;
+    d[i]=r<.0005?q*.7:0;}return b;}
+function lofiSetup(){
+  if(L) return; L={chord:[]};
+  L.bus=ctx.createGain();L.lp=ctx.createBiquadFilter();L.lp.type='lowpass';L.lp.frequency.value=2600;L.lp.Q.value=.6;
+  L.bus.connect(L.lp);L.lp.connect(MASTER);const rs=ctx.createGain();rs.gain.value=.3;L.lp.connect(rs);rs.connect(REV);
+  L.lfo=ctx.createOscillator();L.lfo.frequency.value=.33;L.lfoG=ctx.createGain();L.lfoG.gain.value=9;L.lfo.connect(L.lfoG);L.lfo.start();
+  const cr=ctx.createBufferSource();cr.buffer=crackleBuf();cr.loop=true;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=1500;
+  L.crG=ctx.createGain();L.crG.gain.value=0;cr.connect(hp);hp.connect(L.crG);L.crG.connect(MASTER);cr.start();
+}
+function keys(m,when,v,dur){
+  const env=ctx.createGain();env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.01);
+  env.gain.exponentialRampToValueAtTime(v*.35,when+.45);env.gain.exponentialRampToValueAtTime(.0001,when+dur);env.connect(L.bus);
+  const o=ctx.createOscillator();o.type='sine';o.frequency.value=hz(m);L.lfoG.connect(o.detune);o.connect(env);
+  const o2=ctx.createOscillator();o2.type='sine';o2.frequency.value=hz(m)*2;const g2=ctx.createGain();
+  g2.gain.setValueAtTime(.4,when);g2.gain.exponentialRampToValueAtTime(.01,when+.3);o2.connect(g2);g2.connect(env);L.lfoG.connect(o2.detune);
+  o.start(when);o.stop(when+dur+.05);o2.start(when);o2.stop(when+dur+.05);
+  return {o,o2,env};
+}
+function lofiRoot(){const n=degs().length,r=chordRoot();return barN%2?r+(n===7?3:2):r;}
+function lofiChord(when){
+  const D=degs(),n=D.length,r=lofiRoot(),offs=n===7?[0,2,4,6,8]:[0,2,3,4,6];
+  L.chord.forEach(v=>{try{v.env.gain.cancelScheduledValues(when);v.env.gain.setTargetAtTime(.0001,when,.08);}catch(e){}});
+  L.chord=offs.map((k,i)=>{const idx=r+k;return keys(48+12*Math.floor(idx/n)+D[idx%n],when+i*.028,.045,3.4);});
+}
+function tapeStop(){
+  const c=ctx.currentTime;
+  L.chord.forEach(v=>{[v.o,v.o2].forEach(o=>{o.detune.cancelScheduledValues(c);o.detune.setValueAtTime(0,c);o.detune.linearRampToValueAtTime(-1200,c+.75);});
+    v.env.gain.cancelScheduledValues(c);v.env.gain.setValueAtTime(.035,c);v.env.gain.exponentialRampToValueAtTime(.0001,c+.8);});
+  L.chord=[];
+}
+function lofiKick(when,v){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(115,when);o.frequency.exponentialRampToValueAtTime(46,when+.12);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.006);g.gain.exponentialRampToValueAtTime(.0001,when+.32);o.connect(g);g.connect(L.bus);o.start(when);o.stop(when+.35);}
+function lofiSnare(when,v){noiseHit(when,'bandpass',1700,.7,v,.17,L.bus);
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=185;g.gain.setValueAtTime(v*.6,when);g.gain.exponentialRampToValueAtTime(.0001,when+.09);o.connect(g);g.connect(L.bus);o.start(when);o.stop(when+.1);}
+function lofiBass(m,when,v,dur){const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=hz(m);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.015);g.gain.exponentialRampToValueAtTime(.0001,when+dur);o.connect(g);g.connect(L.bus);o.start(when);o.stop(when+dur+.05);}
+function onTickLofi(when,tD){
+  lofiSetup();
+  const {f}=sample(tD), pouring=f>=THR, span=spanNow(), n=degs().length, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  L.crG.gain.setTargetAtTime(crackleOn&&pouring?.5:0,when,.1);
+  if(!pouring){ if(inPhrase){inPhrase=false;tapeStop();explain(ts+'　停手：磁带停转，和弦往下一沉，鼓和贝斯一起停下');} return; }
+  const energy=Math.max(0,Math.min(1,(f-FMIN)/(FMAX-FMIN)));
+  emaN+=(energy-emaN)*.15;
+  L.lp.frequency.setTargetAtTime(1500+energy*4500,when,.15);
+  const s16=tick%16, w=when+(tick%2===1?.05:0);
+  if(!inPhrase){
+    inPhrase=true;noteCount=0;lastInt=0;barN=0;
+    pos=Math.max(0,Math.min(span,nearestChordTone(Math.round(centerIdx()),1)));
+    lofiChord(when);explain(ts+'　水落下：和弦进来，'+f.toFixed(1)+' g/s，音色开到 '+Math.round(energy*100)+'%');
+  } else if(s16===0){barN++;lofiChord(when);}
+  if(s16===0||s16===10) lofiKick(w,.75);
+  if(s16===4||s16===12) lofiSnare(w,.22);
+  if(tick%2===0) noiseHit(w,'highpass',7000,.7,s16%4===2?.05:.035,.035,L.bus);
+  else if(Math.abs(f-meanFlow(tD,1.5))>.08) noiseHit(w,'highpass',7000,.7,.018,.025,L.bus);
+  {const r=lofiRoot(),root=36+12*Math.floor(r/n)+degs()[r%n];
+   if(s16===0) lofiBass(root,w,.32,.7); else if(s16===10) lofiBass(root,w,.24,.4);
+   else if(s16===14){const a=r+(n===7?4:3);lofiBass(36+12*Math.floor(a/n)+degs()[a%n],w,.2,.25);}}
+  if(tick%2!==0) return;
+  const d=f-sample(tD-.6).f, ad=Math.abs(d);
+  if(tick%4!==0 && ad<.1) return;
+  noteCount++;
+  const c=Math.round(centerIdx()), accent=tick%8===0;
+  let dir,size,why;
+  if(Math.abs(lastInt)>=2){dir=-Math.sign(lastInt);size=1;why='刚跳过 '+Math.abs(lastInt)+' 步，回一步';}
+  else if(ad<.1){ if(pos<c){dir=1;size=1;} else if(pos>c){dir=-1;size=1;} else {dir=1;size=0;} why='流速稳定，靠向 '+f.toFixed(1)+' g/s 的音区'; }
+  else {dir=Math.sign(d);size=ad<.3?1:ad<.6?2:3;why=(d>0?'加速 +':'减速 ')+d.toFixed(2)+' g/s，'+(d>0?'上行 ':'下行 ')+size+' 步';}
+  let next=pos+dir*size; if(accent) next=nearestChordTone(next,dir||1);
+  if(next<0) next=1; if(next>span) next=span-1; lastInt=next-pos; pos=next;
+  keys(midiOf(pos)+12,w,.05+.03*energy,1.1); lastNote=pos; lastNoteT=tD; ringAt(tD,f,accent?1.2:.85);
+  explain(ts+'　'+why+'；音色 '+Math.round(energy*100)+'%');
+}
+
+
+/* ---------- dark techno ----------
+   130 BPM, distorted kick, off-beat rumble bass (lowpassed + saturated, sidechained),
+   metallic 808-style hats, dry clap, a squelching acid line whose filter and accent follow the flow,
+   FM metal clangs. Each pour opens with an impact; stopping cuts to one cold metal echo. */
+let T=null, stopT=0, flashCol='235,240,255';
+let TARGET=240, X={center:4.2,cal:false,cs:0,cn:0,pourStart:0,tier:-1,ended:false,pourTime:0,lastEndT:-9};
+let GENRE='walker'; const isDK=()=>GENRE==='techno'||GENRE==='walker'; const SECVOL=[0,.22,.6,.85];
+const GENRES={
+ walker:{label:'旋律电子：每一杯由冲法决定速度、调、和弦循环和主旋律；前奏 → 律动 → Drop 与顶点 → 一声锣',sect:[null,
+  {name:'第一段 · 前奏',bpm:94,desc:'一声锣。柔和和弦，钢琴弹出这一杯旋律的慢版骨架；旋律边冲边定'},
+  {name:'第二段 · 律动',bpm:94,desc:'两声锣。底鼓、贝斯、拍手进来，主旋律完整唱一遍'},
+  {name:'第三段 · Drop',bpm:94,desc:'三声锣与重击。宽厚和弦、合唱、抽吸感，主旋律爆发'}]},
+ techno:{label:'云南 × 暗黑：一颗咖啡从雨林、山寨走到火塘。闷蒸写下这一杯的动机，锣声报段，最后归于余温',sect:[null,
+  {name:'第一段 · 雨林',bpm:108,desc:'一声锣。没有节拍，只有雨、葫芦丝和它的持续音；你的手正在写下这一杯的动机'},
+  {name:'第二段 · 山寨',bpm:118,desc:'两声锣。象脚鼓和铓锣打出律动，暗色低音垫底，拨弦接过动机'},
+  {name:'第三段 · 火塘',bpm:132,desc:'三声锣。电子底鼓和失真冲到最前，象脚鼓还在，葫芦丝动机升调、八度齐奏'}]},
+ house:{label:'House：四拍底鼓、反拍开镲、和弦切音，温暖跳跃',sect:[null,
+  {name:'第一段 · 暖场',bpm:118,desc:'底鼓加反拍开镲，柔和的和弦'},
+  {name:'第二段 · 舞池',bpm:122,desc:'拍手、跳跃的低音、和弦切音'},
+  {name:'第三段 · 狂欢',bpm:126,desc:'转调升高、钢琴式和弦切音铺满、手鼓'}]},
+ trance:{label:'Trance：滚动低音、超级锯齿琶音，宏大上扬',sect:[null,
+  {name:'第一段 · 星空',bpm:130,desc:'没有鼓，只有长和弦和慢速琶音'},
+  {name:'第二段 · 起飞',bpm:136,desc:'底鼓和滚动低音进场，琶音加速'},
+  {name:'第三段 · 升空',bpm:140,desc:'转调升高、超级锯齿主旋律、开镲和军鼓推进'}]},
+ dnb:{label:'Drum & Bass：极快碎拍、Reese 低音，速度感',sect:[null,
+  {name:'第一段 · 预热',bpm:160,desc:'只有快速踩镲和长长的 Reese 低音'},
+  {name:'第二段 · 碎拍',bpm:172,desc:'经典 D&B 碎拍进场，军鼓在二、四拍'},
+  {name:'第三段 · 冲刺',bpm:176,desc:'转调升高、鬼音军鼓、更密的踩镲和切音'}]},
+ dubstep:{label:'Dubstep：半速重拍、摇摆低音，流速决定摇摆的快慢',sect:[null,
+  {name:'第一段 · 低吼',bpm:140,desc:'只有超低频和慢速摇摆'},
+  {name:'第二段 · 下沉',bpm:140,desc:'半速底鼓和军鼓，摇摆低音跟着流速变快'},
+  {name:'第三段 · 爆裂',bpm:140,desc:'转调升高、更狠的失真摇摆、切分军鼓'}]}
+};
+const SECT_TR=[0,-12,0,5];
+function sect(){const s_=GENRES[GENRE].sect[Math.max(1,Math.min(3,seg))];const o={...s_,tr:SECT_TR[Math.max(1,Math.min(3,seg))]};if(GENRE==='walker'){o.bpm=W.bpm;o.tr=0;}return o;}
+function mtoh(m){return 440*Math.pow(2,(m-69)/12);}
+function tSnare(when,v){noiseHit(when,'bandpass',2200,.6,v,.16,T.duck);const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.setValueAtTime(220,when);o.frequency.exponentialRampToValueAtTime(150,when+.06);g.gain.setValueAtTime(v*.8,when);g.gain.exponentialRampToValueAtTime(.0001,when+.1);o.connect(g);g.connect(T.duck);o.start(when);o.stop(when+.12);}
+function tSuper(m,when,v,dur,cut){const env=ctx.createGain(),fl=ctx.createBiquadFilter();fl.type='lowpass';fl.frequency.value=cut||5000;fl.Q.value=1;
+  env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.008);env.gain.setValueAtTime(v*.8,when+dur*.7);env.gain.exponentialRampToValueAtTime(.0001,when+dur);
+  [-17,-7,0,7,17].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.05);});fl.connect(env);env.connect(T.duck);env.connect(T.dl);}
+function tStab(ms,when,v,dur,cut){ms.forEach(m=>tSuper(m,when,v/ms.length*1.6,dur,cut));}
+function tSub(m,when,v,dur){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=mtoh(m);g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.01);g.gain.setValueAtTime(v,when+dur*.8);g.gain.exponentialRampToValueAtTime(.0001,when+dur);o.connect(g);g.connect(T.duck);o.start(when);o.stop(when+dur+.05);}
+function tReese(m,when,v,dur){const fl=ctx.createBiquadFilter(),g=ctx.createGain(),sh=shaper(2);fl.type='lowpass';fl.frequency.setValueAtTime(900,when);fl.frequency.exponentialRampToValueAtTime(260,when+dur);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.02);g.gain.setValueAtTime(v,when+dur*.85);g.gain.exponentialRampToValueAtTime(.0001,when+dur);
+  [-14,14].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.05);});fl.connect(sh);sh.connect(g);g.connect(T.duck);}
+function tWobble(m,when,v,dur,rate,grit){const fl=ctx.createBiquadFilter(),g=ctx.createGain(),sh=shaper(grit?5:2.5),lfo=ctx.createOscillator(),lg=ctx.createGain();
+  fl.type='lowpass';fl.Q.value=9;fl.frequency.value=700;lfo.type='sine';lfo.frequency.value=rate;lg.gain.value=600;lfo.connect(lg);lg.connect(fl.frequency);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.01);g.gain.setValueAtTime(v,when+dur*.9);g.gain.exponentialRampToValueAtTime(.0001,when+dur);
+  [['sawtooth',m,0],['square',m,7],['sine',m-12,0]].forEach(([ty,mm,d])=>{const o=ctx.createOscillator();o.type=ty;o.frequency.value=mtoh(mm);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.05);});
+  lfo.start(when);lfo.stop(when+dur+.05);fl.connect(sh);sh.connect(g);g.connect(T.duck);}
+function chordAt(r,TR){const D=degs(),n=D.length;return [0,2,4].map(k=>{const i=r+k;return 48+TR+12*Math.floor(i/n)+D[i%n];});}
+/* per-genre groove; SN = section 1..3, tier 0..2 */
+function groove(when,SN,tier,s16,root,TR,r){
+  const G=GENRE, ch=chordAt(r,TR);
+  if(G==='techno'){
+    if(SN===1){ if(tick%8===0) tKick(when); if(s16===0) tMetal(midiOf(0)-24,when,.12,3); if(tier>=1&&tick%4===2) tHat(when,.05,false); if(tier===2&&s16===12) clap(when,.18); }
+    else if(SN===2){ if(tick%4===0) tKick(when); if(tick%4===2||tick%4===3) tRumble(root+12,when,tier===0?.45:.55);
+      if(tier>=1&&(s16===4||s16===12)) clap(when,.24); if(tier>=1&&tick%4===2) tHat(when,.09,false); if(tier===2&&tick%2===1) tHat(when,.04,false); }
+    else { if(tick%4===0||s16===14) tKick(when); if(tick%4!==0) tRumble(root+12,when,.55); if(s16===4||s16===12) clap(when,.3);
+      if(tick%4===2) tHat(when,.1,false); else if(tick%4!==0) tHat(when,.05,false); if(s16===14||(tier===2&&s16===6)) tHat(when,.08,true);
+      if(tick%2===1&&tier>=1){const arp=[0,2,4,7][(tick>>1)%4];tMetal(midiOf(pos+arp)+TR,when,.035+.02*tier,.25);}
+      if(tick%64>=56) noiseHit(when,'bandpass',1900,.8,.04+.025*(tick%64-56),.08,T.duck); }
+  } else if(G==='house'){
+    if(tick%4===0) tKick(when,SN===1);
+    if(tick%4===2) tHat(when,SN===1?.06:.09,true);
+    if(s16===0) tStab(ch,when,SN===1?.05:.06,SN===1?TICK*15:TICK*3,SN===1?1400:2600+tier*900);
+    if(SN>=2){ if(s16===4||s16===12) clap(when,.26); if(tick%4===2||(tier>=1&&s16===7)) tSub(root+12,when,.32,TICK*1.6);
+      if(tier>=1&&tick%2===1) tHat(when,.035,false); if(s16===6||s16===10||(tier===2&&s16===14)) tStab(ch,when,.05,TICK*1.2,3000+tier*1000); }
+    if(SN===3){ if(s16===3||s16===11) tStab(ch.map(m=>m+12),when,.04,TICK,4500); if(tier>=1&&(s16===2||s16===9||s16===13)) noiseHit(when,'bandpass',600,2,.12,.09,T.duck); }
+  } else if(G==='trance'){
+    if(SN===1){ if(s16===0) tStab(ch,when,.05,TICK*16,1600+tier*600); if(tick%2===0){const a=[0,1,2,1][(tick>>1)%4];tMetal(ch[a]+12,when,.03+.015*tier,.5);} }
+    else { if(tick%4===0) tKick(when); if(tick%4!==0) tSub(root+12,when,.28,TICK*.8);
+      if(tick%4===2) tHat(when,.1,true); if(tier>=1&&tick%2===1) tHat(when,.035,false);
+      if(s16===0) tStab(ch,when,.05,TICK*16,2000+tier*1200);
+      const a=[0,1,2,1,2,0,1,2][tick%8]; tSuper(ch[a]+12+(SN===3?12:0),when,.025+.012*tier,TICK*.9,2500+tier*2500);
+      if(SN===3){ if(s16===4||s16===12) tSnare(when,.2); if(tick%64>=48) tSnare(when,.05+.012*(tick%64-48)); } }
+  } else if(G==='dnb'){
+    if(SN===1){ if(tick%2===0) tHat(when,.05+.02*tier,false); if(s16===0) tReese(root+12,when,.32,TICK*15); if(tier===2&&s16===8) tReese(root+15,when,.2,TICK*7); }
+    else { if(s16===0||s16===10||(tier===2&&s16===7)) tKick(when); if(s16===4||s16===12) tSnare(when,.32);
+      tHat(when,tick%2===0?.06:.03,false); if(s16===0||s16===8) tReese(root+12,when,.3,TICK*7);
+      if(SN===3){ if(s16===7||s16===9||s16===15) tSnare(when,.08); if(tier>=1&&s16%4===3) tStab(ch,when,.04,TICK,3500); } }
+  } else if(G==='dubstep'){
+    const rate=[2,4,8][tier]*(SN===3?1.5:1)*(1/(TICK*16));
+    if(SN===1){ if(s16===0) tSub(root+12,when,.4,TICK*15); if(tier>=1&&s16===0) tWobble(root+12,when,.12,TICK*15,rate/2,false); }
+    else { if(s16===0||(SN===3&&s16===10)) tKick(when); if(s16===8) tSnare(when,.4); if(SN===3&&(s16===14||s16===15)) tSnare(when,.12);
+      if(tick%4===2) tHat(when,.06,false); if(s16===0||s16===8) tWobble(root+12,when,.18+.04*tier,TICK*8,rate,SN===3); }
+  }
+}
+function leadVoice(m,when,accent,ae,SN,tier){
+  const G=GENRE;
+  if(G==='techno'){ if(SN===1){ if(tick%4===0) tMetal(m-12,when,.07+.04*tier,1.2); if(tier===2) tAcid(m-24,when,.08,accent,ae*.6); return; }
+    tAcid(m-(tier===2||SN===3?12:24),when,SN===3?.15:.13,accent,SN===3?Math.max(ae,.5):ae); return; }
+  if(G==='house'){ if(SN>=2&&tick%4===0) tMetal(m,when,.05+.03*tier,.8); return; }
+  if(G==='trance'){ if(SN===3) tSuper(m+12,when,.05+.02*tier,TICK*2,3000+tier*2500); else if(SN===2&&tick%4===0) tMetal(m,when,.05,.6); return; }
+  if(G==='dnb'){ if(SN>=2&&tick%4===2) tStab([m,m+7],when,.04+.02*tier,TICK*1.5,2500+tier*1500); return; }
+  if(G==='dubstep'){ if(SN>=2&&tick%8===4) tMetal(m,when,.06+.03*tier,.7); return; }
+}
+function resetX(){if(typeof wReset==='function')wReset();if(typeof dkReset==='function')dkReset();X={center:4.2,cal:false,cs:0,cn:0,pourStart:0,tier:-1,ended:false,pourTime:0,lastEndT:-9};}
+function tFill(when){for(let k=0;k<4;k++) noiseHit(when+k*TICK/2,'bandpass',1900,.8,.08+.06*k,.08,T.duck);}
+function tDown(when){const o=ctx.createOscillator(),g=ctx.createGain(),fl=ctx.createBiquadFilter();fl.type='lowpass';fl.frequency.value=1800;
+  o.type='sawtooth';o.frequency.setValueAtTime(700,when);o.frequency.exponentialRampToValueAtTime(70,when+.5);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.12,when+.01);g.gain.exponentialRampToValueAtTime(.0001,when+.55);o.connect(fl);fl.connect(g);g.connect(T.duck);o.start(when);o.stop(when+.6);}
+function playEnding(tD,w){
+  if(X.ended||!ctx) return; X.ended=true; technoSetup();
+  if(isDK()){ darkOutroStart(tD,w); return; }
+  if(liveRunning&&!playEnding.manual) setTimeout(()=>endBrew(true),isDK()?6500:6500);
+  const c=ctx.currentTime+.05, diff=w-TARGET, ok=Math.abs(diff)<=6, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  [T.rsG.gain,T.uwG.gain,T.uwF.frequency].forEach(p=>p.cancelScheduledValues(c));
+  T.rsG.gain.setValueAtTime(0,c);
+  T.uwF.frequency.setValueAtTime(20000,c);T.uwF.frequency.exponentialRampToValueAtTime(180,c+6);
+  T.uwG.gain.setValueAtTime(1,c);T.uwG.gain.linearRampToValueAtTime(0,c+6.5);
+  dropHit(c);tKick(c);
+  for(let k=1;k<=8;k++) tKick(c+k*TICK*4,true);
+  const r=ok?[0,2,4]:[1,3,6];
+  r.forEach((d,i)=>tMetal(midiOf(d)-12,c+.45+i*.18,ok?.14:.1,ok?5.5:3));
+  if(!ok) tMetal(midiOf(1)-24,c+1.1,.12,2.5);
+  const avg=X.pourTime>0?w/X.pourTime:0;
+  const sum='总水量 '+Math.round(w)+' g（目标 '+TARGET+' g，'+(diff>=0?'+':'')+diff.toFixed(0)+'）· 用时 '+ts+' · 注水平均 '+avg.toFixed(1)+' g/s';
+  explain(ts+'　结尾：'+(ok?'命中目标，旋律落回主音，完满收尾':'偏离目标，停在没有解决的和弦上')+'。'+sum);
+  noteEl.textContent=ok?'终':'未完';
+  if(typeof status==='function'&&liveRunning) status('结尾中… '+sum);
+  X.summary=sum;
+}
+function waitBeat(when){ // fixed level, bypasses section volume
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(210,when);o.frequency.exponentialRampToValueAtTime(95,when+.09);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.55,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.3);o.connect(g);g.connect(COMP);o.start(when);o.stop(when+.32);
+  const n=ctx.createBufferSource();n.buffer=noiseBuf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1100;bp.Q.value=1.2;const ng=ctx.createGain();
+  ng.gain.setValueAtTime(.18,when);ng.gain.exponentialRampToValueAtTime(.0001,when+.035);n.connect(bp);bp.connect(ng);ng.connect(COMP);n.start(when);n.stop(when+.05);
+  heartbeat(when,.3);}
+function heartbeat(when,v){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(95,when);o.frequency.exponentialRampToValueAtTime(48,when+.12);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.005);g.gain.exponentialRampToValueAtTime(.0001,when+.35);o.connect(g);g.connect(MASTER);o.start(when);o.stop(when+.4);}
+function drip(when,v){noiseHit(when,'lowpass',900,1.5,v,.05,MASTER);}
+function bubble(when,fq){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(fq,when);o.frequency.exponentialRampToValueAtTime(fq*1.9,when+.045);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.06,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.07);o.connect(g);g.connect(MASTER);o.start(when);o.stop(when+.08);}
+function shaper(k){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;c[i]=Math.tanh(k*x)/Math.tanh(k);}const w=ctx.createWaveShaper();w.curve=c;w.oversample='2x';return w;}
+function technoSetup(){
+  if(T) return; T={};
+  T.uwF=ctx.createBiquadFilter();T.uwF.type='lowpass';T.uwF.frequency.value=20000;T.uwF.Q.value=.8;T.uwG=ctx.createGain();
+  T.uwF.connect(T.uwG);T.uwG.connect(MASTER);const rs=ctx.createGain();rs.gain.value=.3;T.uwG.connect(rs);rs.connect(REV);
+  T.duck=ctx.createGain();T.duck.connect(T.uwF);
+  T.kickBus=ctx.createGain();T.kickBus.gain.value=.9;const ks=shaper(3.5);T.kickBus.connect(ks);ks.connect(T.uwF);
+  const nz=ctx.createBufferSource();nz.buffer=noiseBuf;nz.loop=true;T.rsF=ctx.createBiquadFilter();T.rsF.type='bandpass';T.rsF.Q.value=5;T.rsF.frequency.value=300;
+  T.rsG=ctx.createGain();T.rsG.gain.value=0;nz.connect(T.rsF);T.rsF.connect(T.rsG);T.rsG.connect(MASTER);const rr=ctx.createGain();rr.gain.value=.25;T.rsG.connect(rr);rr.connect(REV);nz.start();
+  T.rumIn=ctx.createGain();const rl=ctx.createBiquadFilter();rl.type='lowpass';rl.frequency.value=120;const rsh=shaper(4);const rg=ctx.createGain();rg.gain.value=.42;
+  T.rumIn.connect(rl);rl.connect(rsh);rsh.connect(rg);rg.connect(T.duck);
+  T.acidF=ctx.createBiquadFilter();T.acidF.type='lowpass';T.acidF.Q.value=13;T.acidF.frequency.value=400;
+  const ash=shaper(2.5);T.acidG=ctx.createGain();T.acidG.gain.value=.42;T.acidF.connect(ash);ash.connect(T.acidG);T.acidG.connect(T.duck);
+  T.dl=ctx.createDelay(1);T.dl.delayTime.value=.346;const fb=ctx.createGain();fb.gain.value=.45;T.dl.connect(fb);fb.connect(T.dl);
+  const dw=ctx.createGain();dw.gain.value=.32;T.dl.connect(dw);dw.connect(MASTER);
+}
+function tKick(when,quiet){
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(170,when);o.frequency.exponentialRampToValueAtTime(42,when+.08);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(1,when+.003);g.gain.setValueAtTime(1,when+.06);g.gain.exponentialRampToValueAtTime(.0001,when+.42);
+  o.connect(g);g.connect(T.kickBus);o.start(when);o.stop(when+.45);if(!quiet)flashV=1;
+  const d=T.duck.gain;d.cancelScheduledValues(when);d.setValueAtTime(.15,when);d.linearRampToValueAtTime(1,when+.2);
+}
+function tRumble(m,when,v){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';o.frequency.value=hz(m);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.11);o.connect(g);g.connect(T.rumIn);o.start(when);o.stop(when+.13);}
+function tHat(when,v,open){
+  const g=ctx.createGain(),bp=ctx.createBiquadFilter(),hp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=10000;bp.Q.value=.8;hp.type='highpass';hp.frequency.value=7000;
+  const dec=open?.24:.035;g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.002);g.gain.exponentialRampToValueAtTime(.0001,when+dec);
+  [205.3,304.4,369.6,522.7,540,800].forEach(fq=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=fq*1.6;o.connect(bp);o.start(when);o.stop(when+dec+.02);});
+  bp.connect(hp);hp.connect(g);g.connect(T.duck);
+}
+function tMetal(m,when,v,dec){
+  const f=hz(m),c=ctx.createOscillator(),md=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain();
+  c.type='sine';c.frequency.value=f;md.type='sine';md.frequency.value=f*1.414;mg.gain.setValueAtTime(f*3.2,when);mg.gain.exponentialRampToValueAtTime(f*.2,when+dec);
+  md.connect(mg);mg.connect(c.frequency);g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.002);g.gain.exponentialRampToValueAtTime(.0001,when+dec);
+  c.connect(g);g.connect(T.duck);g.connect(T.dl);c.start(when);md.start(when);c.stop(when+dec+.05);md.stop(when+dec+.05);
+}
+function tAcid(m,when,v,acc,energy){
+  const base=180+energy*1700, o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';o.frequency.value=hz(m);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v*(acc?1.4:1),when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.17);
+  o.connect(g);g.connect(T.acidF);o.start(when);o.stop(when+.2);
+  const fq=T.acidF.frequency;fq.cancelScheduledValues(when);fq.setValueAtTime(base*(acc?4.5:2.6),when);fq.exponentialRampToValueAtTime(base,when+.16);
+}
+function onTickTechno(when,tD){
+  technoSetup();
+  if(GENRE==='walker') return onTickWalker(when,tD);
+  if(GENRE==='techno') return onTickDark(when,tD);
+  if(X.ended) return;
+  const {f,w}=sample(tD), pouring=f>=THR, span=spanNow(), n=degs().length, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  const r0=chordRoot(), root0=24+12*Math.floor(r0/n)+degs()[r0%n];
+  if(!pouring){
+    if(inPhrase){inPhrase=false;stopT=tD;X.lastEndT=tD;const c=ctx.currentTime;tMetal(midiOf(pos)-12,c+.01,.08,2.2);
+      T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(160,c,.03);T.uwG.gain.setTargetAtTime(.12,c,.04);
+      explain(ts+'　停手：音乐沉到很深的水下，几乎安静（你最近的平均流速 '+X.center.toFixed(1)+' g/s，比它快 1.2 g/s 就是“猛”，慢 1.2 g/s 就是“轻”）');}
+    if(stopT<=0) return;
+    const wait=Math.max(0,tD-stopT);
+    if(w>=TARGET*.85&&wait>=3){playEnding(tD,w);return;}
+    const fade=wait<30?1:Math.max(0,1-(wait-30)/12);
+    T.uwG.gain.setTargetAtTime(.12*fade,when,.3);
+    if(fade>0&&tick%8===0) tKick(when,true);
+    const rise=wait<25?Math.min(1,wait/25):Math.max(0,1-(wait-25)/8);
+    T.rsF.frequency.setTargetAtTime(Math.min(7000,260*Math.pow(2,Math.min(wait,25)/5.2)),when,.1);
+    T.rsG.gain.setTargetAtTime(.04*rise,when,.1);
+    if(seg===1){const h=((tick*2654435761)>>>0)%1000, dens=Math.max(25,420*Math.exp(-wait/9)); if(h<dens) bubble(when,650+(h*7)%950);}
+    if(tick%9===0) explain(ts+'　水下等待 '+wait.toFixed(0)+' 秒，蓄力 '+Math.round(rise*100)+'%（已注 '+Math.round(w)+' / '+TARGET+' g）');
+    return;
+  }
+  X.pourTime+=TICK;
+  if(!inPhrase) X.pourStart=tD;
+  if(tD-X.pourStart>1){ if(!X.cal){X.cs+=f;X.cn++; if(X.cn>=12){X.center=X.cs/X.cn;X.cal=true;}} else X.center+=(f-X.center)*(TICK/12); }
+  X.center=Math.max(2.5,Math.min(6.5,X.center));
+  const lo=X.center-1.2, hi=X.center+1.2;
+  const energy=Math.max(0,Math.min(1,(f-lo)/(hi-lo)));
+  emaN+=(energy-emaN)*.25;
+  // three tiers with hysteresis
+  let tier=X.tier<0?(emaN<.33?0:emaN<.66?1:2):X.tier;
+  if(X.tier>=0){ if(tier<2&&emaN>[.39,.72][tier]) tier++; else if(tier>0&&emaN<[0,.27,.6][tier]) tier--; }
+  const tierNames=['轻：层次收到最少','中：加一层','猛：这一段的全部乐器打开'];
+  if(!inPhrase){
+    inPhrase=true;noteCount=0;lastInt=0;X.tier=tier;
+    pos=Math.max(0,Math.min(span,nearestChordTone(Math.round(centerIdx()),1)));
+    const waited=Math.max(0,tD-stopT);
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    dropHit(when);tMetal(midiOf(0)-24,when,.22,1.6);noiseHit(when,'lowpass',900,.5,.35,.5);
+    X.hold=tD+1.2;
+    flashCol=['','150,190,255','235,240,255','255,190,110'][Math.min(3,seg)];
+    explain(ts+'　'+sect().name+'：'+sect().desc+(stopT>0?'（释放 '+waited.toFixed(0)+' 秒的蓄力）':''));
+  } else if(tier!==X.tier){
+    if(tier>X.tier){tFill(when);tMetal(midiOf(pos)+12,when,.08,1);} else tDown(when);
+    X.hold=tD+1;
+    explain(ts+'　'+(tier>X.tier?'加快 → ':'放慢 → ')+tierNames[tier]+'（'+f.toFixed(1)+' g/s）');
+    X.tier=tier;
+  }
+  const SN=Math.max(1,Math.min(3,seg)), TR=sect().tr;
+  const s16=tick%16, r=chordRoot(), root=24+12*Math.floor(r/n)+degs()[r%n]+(SN===3?5:0);
+  groove(when,SN,tier,s16,root,TR,r);
+  const d=f-sample(tD-.6).f, ad=Math.abs(d);
+  if(d>.5&&tick%4===2){tMetal(midiOf(pos)+12,when,.08,.9);}
+  if(d<-.5&&tick%8===2) tDown(when);
+  const ae=tier===0?Math.min(.25,energy):tier===1?.35+energy*.35:.75+energy*.25;
+  if(tick%2===0){
+    noteCount++;
+    const c=Math.round(centerIdx()), accent=tick%8===6;
+    let dir,size,why;
+    if(Math.abs(lastInt)>=2){dir=-Math.sign(lastInt);size=1;why='刚跳过 '+Math.abs(lastInt)+' 步，回一步';}
+    else if(ad<.1){ if(pos<c){dir=1;size=1;} else if(pos>c){dir=-1;size=1;} else {dir=1;size=0;} why='流速稳定 '+f.toFixed(1)+' g/s'; }
+    else {dir=Math.sign(d);size=ad<.3?1:ad<.6?2:3;why=(d>0?'加速 +':'减速 ')+d.toFixed(2)+' g/s，'+(d>0?'上行 ':'下行 ')+size+' 步';}
+    let next=pos+dir*size; if(tick%4===0) next=nearestChordTone(next,dir||1);
+    if(next<0) next=1; if(next>span) next=span-1; lastInt=next-pos; pos=next;
+    leadVoice(midiOf(pos)+TR,when,accent,ae,SN,tier);
+    lastNote=pos; lastNoteT=tD; ringAt(tD,f,tick%4===0?1.3:.8);
+    if(tick%4===0&&!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' · '+why+' · '+['轻','中','猛'][tier]+' · 已注 '+Math.round(w)+' / '+TARGET+' g');
+  } else if(GENRE==='techno'&&tier>=1&&SN>=2){ tAcid(midiOf(pos)+TR-(tier===2?0:(tick%8===3?12:24)),when,.09,false,SN===3?Math.max(ae,.5):ae); }
+}
+
+
+/* ================= dark techno v3.3 — the cup writes a motif, the three pours sing it ================= */
+const RHY=[[2,1,-1,2,-2,3,1,4],[4,-1,1,2,-2,2,2,2],[1,1,-2,4,-1,1,2,4]];        // motif rhythms in 8ths, each sums to 16 (2 bars)
+const PROG={1:[[0,0,3,3],[0,0,2,2]],2:[[0,3,1,4],[0,2,3,4]],3:[[0,4,3,1],[0,3,4,0]]};
+const DKPROG7={1:[[0,0,1,1],[0,0,6,1]],2:[[0,1,6,0],[0,5,1,0]],3:[[0,6,5,1],[5,6,0,1]]};
+function progTable(){return degs().length===7?DKPROG7:PROG;}
+const DK={};
+function dkReset(){Object.assign(DK,{fx:DK.fx,yn:DK.yn,peaked:false,gap:false,startedSeg:0,lastPourT:undefined,lastF:0,breathMsg:false,peakLayers:false,climbShift:0,leadBoost:1,lastGram:0,hitTarget:false,landStage:0,pk:0,p0:0,peakT:0,wAtHoldEnd:undefined,title:null,titleT:-9,titleKeep:false,waitT0:0,motif:[],rhy:RHY[0],prog:null,phr0:0,vari:{shift:0,inv:false},writing:true,outro:null,lastWrite:-9});}
+dkReset();
+function dkName(d){const m=midiOf(d);const N=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];return N[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);}
+function dkLead(m,when,v,dur,SN){
+  if(SN===1){ tMetal(m+12,when,v*1.1,Math.min(3.5,dur+1.2)); return; }
+  if(SN===2){ const env=ctx.createGain(),fl=ctx.createBiquadFilter();fl.type='lowpass';fl.Q.value=4;
+    fl.frequency.setValueAtTime(3600,when);fl.frequency.exponentialRampToValueAtTime(500,when+Math.max(.25,dur*.7));
+    env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.005);env.gain.exponentialRampToValueAtTime(.0001,when+Math.max(.3,dur*.95));
+    [-9,9].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.1);});
+    const sq=ctx.createOscillator();sq.type='square';sq.frequency.value=mtoh(m-12);const sg2=ctx.createGain();sg2.gain.value=.35;sq.connect(sg2);sg2.connect(fl);sq.start(when);sq.stop(when+dur+.1);
+    fl.connect(env);env.connect(T.duck);env.connect(T.dl);return; }
+  tSuper(m,when,v,Math.max(.25,dur*.95),5200);tSuper(m+12,when,v*.55,Math.max(.25,dur*.95),6500);
+}
+function dkChordRoot(SN){const pr=DK.prog||progTable()[SN][0];return pr[Math.floor(Math.max(0,tick)/16)%4];}
+function dkTarget(d,kind){const n=degs().length;
+  if(kind==='home'){return Math.round(d/n)*n;}
+  const want=n===7?1:(scale.deg[1]===1?1:3);let best=d,bd=99;for(let k=-n;k<=n;k++){const c=(Math.floor(d/n)+0)*n+want+k*0;} // dominant-ish degree
+  const base=Math.floor(d/n)*n;for(const c of [base+want-n,base+want,base+want+n]){if(Math.abs(c-d)<bd){bd=Math.abs(c-d);best=c;}} return best;}
+function dkFx(){
+  if(DK.fx) return; const fx={}; fx.rev=ctx.createConvolver(); fx.rev.buffer=impulse(6,3);
+  const rw=ctx.createGain(); rw.gain.value=.55; fx.rev.connect(rw); rw.connect(MASTER);
+  fx.in=ctx.createGain(); fx.in.connect(T.uwF); fx.in.connect(fx.rev);
+  fx.clear=ctx.createGain(); fx.clear.connect(MASTER); fx.clearRev=ctx.createGain(); fx.clearRev.gain.value=.25; fx.clear.connect(fx.clearRev); fx.clearRev.connect(fx.rev);
+  fx.dL=ctx.createDelay(2); fx.dR=ctx.createDelay(2); const fb=ctx.createGain(); fb.gain.value=.42; const tone=ctx.createBiquadFilter(); tone.type='lowpass'; tone.frequency.value=2600;
+  const pL=ctx.createStereoPanner?ctx.createStereoPanner():ctx.createGain(), pR=ctx.createStereoPanner?ctx.createStereoPanner():ctx.createGain();
+  if(pL.pan){pL.pan.value=-.7;pR.pan.value=.7;}
+  fx.send=ctx.createGain(); fx.send.gain.value=.5; fx.send.connect(fx.dL); fx.dL.connect(tone); tone.connect(fx.dR); fx.dR.connect(fb); fb.connect(fx.dL);
+  fx.dL.connect(pL); fx.dR.connect(pR); const dw=ctx.createGain(); dw.gain.value=.45; pL.connect(dw); pR.connect(dw); dw.connect(fx.in);
+  DK.fx=fx; dkEcho();
+}
+function dkEcho(){ if(!DK.fx) return; const d=Math.min(1.9,TICK*3); DK.fx.dL.delayTime.setValueAtTime(d,ctx.currentTime); DK.fx.dR.delayTime.setValueAtTime(d,ctx.currentTime); }
+function dkOut(g,echo){ dkFx(); if(DK.clearOut){ g.connect(DK.clearTarget||DK.fx.clear); return; } g.connect(DK.fx.in); if(echo&&!DK.dryLead) g.connect(DK.fx.send); }
+function clearCall(fn){ DK.clearOut=true; try{fn();}finally{DK.clearOut=false;} }
+function dkGlass(m,when,v,dur){
+  const f=mtoh(m), c=ctx.createOscillator(), md=ctx.createOscillator(), mg=ctx.createGain(), g=ctx.createGain(), o2=ctx.createOscillator(), g2=ctx.createGain();
+  c.type='sine'; c.frequency.value=f; md.type='sine'; md.frequency.value=f*2; mg.gain.setValueAtTime(f*1.6,when); mg.gain.exponentialRampToValueAtTime(f*.05,when+dur*.8+.3);
+  md.connect(mg); mg.connect(c.frequency); o2.type='sine'; o2.frequency.value=f*3.01; g2.gain.setValueAtTime(.18,when); g2.gain.exponentialRampToValueAtTime(.001,when+.6); o2.connect(g2); g2.connect(g);
+  g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.004); g.gain.exponentialRampToValueAtTime(.0001,when+dur+1.4);
+  c.connect(g); dkOut(g,true); [c,md,o2].forEach(o=>{o.start(when);o.stop(when+dur+1.5);});
+}
+let dkPrevLead=null;
+function dkLead(m,when,v,dur,SN){
+  if(SN===1){ DK.dryLead=true; hulusi(m,when,v*1.1,Math.max(.6,dur),false); DK.dryLead=false; return; }
+  if(SN===2){ const env=ctx.createGain(),fl=ctx.createBiquadFilter();fl.type='lowpass';fl.Q.value=6;
+    fl.frequency.setValueAtTime(2200,when);fl.frequency.exponentialRampToValueAtTime(380,when+Math.max(.3,dur*.8));
+    env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.006);env.gain.exponentialRampToValueAtTime(.0001,when+Math.max(.35,dur));
+    [-6,6].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.15);});
+    fl.connect(env); dkOut(env,true); if(dur>=TICK*4) dkGlass(m+12,when,v*.35,dur); return; }
+  // section 3: distorted hulusi doubled an octave up, glass shadow
+  hulusi(m,when,v*.9,Math.max(.3,dur),true); hulusi(m+12,when,v*.35,Math.max(.3,dur),false); dkGlass(m+24,when,v*.18,dur); dkPrevLead=m; return;
+  const env=ctx.createGain(),fl=ctx.createBiquadFilter(),vib=ctx.createOscillator(),vg=ctx.createGain();fl.type='lowpass';fl.Q.value=2;fl.frequency.value=2400;
+  vib.frequency.value=5.2;vg.gain.setValueAtTime(0,when);vg.gain.linearRampToValueAtTime(14,when+Math.min(.6,dur));vib.connect(vg);
+  env.gain.setValueAtTime(0,when);env.gain.linearRampToValueAtTime(v,when+.02);env.gain.setValueAtTime(v*.85,when+dur*.8);env.gain.exponentialRampToValueAtTime(.0001,when+dur+.25);
+  const from=dkPrevLead!==null&&Math.abs(dkPrevLead-m)<=7?dkPrevLead:m;
+  [-10,10].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(mtoh(from),when);o.frequency.exponentialRampToValueAtTime(mtoh(m),when+.07);o.detune.value=d;vg.connect(o.detune);o.connect(fl);o.start(when);o.stop(when+dur+.3);});
+  vib.start(when);vib.stop(when+dur+.3);fl.connect(env);dkOut(env,true);dkPrevLead=m;
+  dkGlass(m+12,when,v*.3,dur);
+}
+function dkPad(r,TR,SN,tier,when,len){
+  const D=degs(),n=D.length, steps=n===7?[0,4,9,13]:[0,3,6,9];
+  const ms=steps.map(k=>{const i=r+k;return 36+TR+12*Math.floor(i/n)+D[((i%n)+n)%n];});
+  const fl=ctx.createBiquadFilter(),g=ctx.createGain(),lfo=ctx.createOscillator(),lg=ctx.createGain();
+  fl.type='lowpass';fl.Q.value=1.5;fl.frequency.value=SN===1?700:SN===2?1000+tier*200:1500+tier*300;lfo.frequency.value=.11;lg.gain.value=SN===1?250:400;lfo.connect(lg);lg.connect(fl.frequency);
+  const v=SN===1?.022:SN===2?.04:.045;
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+Math.min(1.2,len*.3));g.gain.setValueAtTime(v,when+len*.85);g.gain.linearRampToValueAtTime(0,when+len+.8);
+  ms.forEach((m,i)=>[-8,8].forEach(d=>{const o=ctx.createOscillator();o.type=i===0?'triangle':'sawtooth';o.frequency.value=mtoh(m+(i===0?0:12));o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+len+1);}));
+  lfo.start(when);lfo.stop(when+len+1);fl.connect(g);dkOut(g,false);
+}
+function dkYN(){
+  dkFx(); if(DK.yn) return; const y={};
+  // rain bed
+  const nz=ctx.createBufferSource();nz.buffer=noiseBuf;nz.loop=true;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=2500;
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4200;y.rainG=ctx.createGain();y.rainG.gain.value=0;
+  nz.connect(hp);hp.connect(lp);lp.connect(y.rainG);y.rainG.connect(MASTER);nz.start();
+  // hulusi drone pipe
+  y.dr=ctx.createOscillator();y.dr.type='square';y.dr2=ctx.createOscillator();y.dr2.type='sawtooth';
+  const dl=ctx.createBiquadFilter();dl.type='lowpass';dl.frequency.value=900;dl.Q.value=2;y.drG=ctx.createGain();y.drG.gain.value=0;
+  const vb=ctx.createOscillator(),vg=ctx.createGain();vb.frequency.value=4.6;vg.gain.value=5;vb.connect(vg);vg.connect(y.dr.detune);vg.connect(y.dr2.detune);
+  y.dis=ctx.createOscillator();y.dis.type='sawtooth';y.disG=ctx.createGain();y.disG.gain.value=0;const dsf=ctx.createBiquadFilter();dsf.type='lowpass';dsf.frequency.value=1400;y.dis.connect(dsf);dsf.connect(y.disG);y.disG.connect(DK.fx.in);y.dis.start();
+  y.dr.connect(dl);y.dr2.connect(dl);dl.connect(y.drG);y.drG.connect(DK.fx.in);y.dr.start();y.dr2.start();vb.start();
+  DK.yn=y;
+}
+function ynSet(rain,drone,when,midi){dkYN();const y=DK.yn;y.rainG.gain.setTargetAtTime(rain,when,.8);y.drG.gain.setTargetAtTime(drone,when,.6);
+  if(midi!==undefined){y.dr.frequency.setTargetAtTime(mtoh(midi),when,.05);y.dr2.frequency.setTargetAtTime(mtoh(midi)*1.002,when,.05);}}
+function hulusi(m,when,v,dur,grit){
+  dkFx(); const f=mtoh(m), fl=ctx.createBiquadFilter(), g=ctx.createGain(), vb=ctx.createOscillator(), vg=ctx.createGain();
+  fl.type='lowpass';fl.Q.value=3;fl.frequency.value=grit?2600:1500;
+  vb.frequency.value=5.3;vg.gain.setValueAtTime(0,when);vg.gain.linearRampToValueAtTime(18,when+Math.min(.5,dur*.6));vb.connect(vg);
+  const L=Math.max(.2,dur);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.07);g.gain.setValueAtTime(v*.85,when+L*.85);g.gain.exponentialRampToValueAtTime(.0001,when+L+.25);
+  [['square',0,.55],['sawtooth',4,.45],['sine',0,.6]].forEach(([ty,d,a])=>{const o=ctx.createOscillator(),og=ctx.createGain();o.type=ty;
+    o.frequency.setValueAtTime(f*.97,when);o.frequency.exponentialRampToValueAtTime(f,when+.06);o.detune.value=d;vg.connect(o.detune);og.gain.value=a;o.connect(og);og.connect(fl);o.start(when);o.stop(when+L+.3);});
+  const br=ctx.createBufferSource();br.buffer=noiseBuf;br.loop=true;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=f*2;bp.Q.value=4;
+  const bg=ctx.createGain();bg.gain.setValueAtTime(0,when);bg.gain.linearRampToValueAtTime(.25,when+.05);bg.gain.exponentialRampToValueAtTime(.05,when+.3);bg.gain.setValueAtTime(.05,when+L);bg.gain.linearRampToValueAtTime(0,when+L+.2);
+  br.connect(bp);bp.connect(bg);bg.connect(fl);br.start(when);br.stop(when+L+.3);
+  vb.start(when);vb.stop(when+L+.3);
+  if(grit){const sh=shaper(3.5);fl.connect(sh);sh.connect(g);} else fl.connect(g);
+  dkOut(g,true);
+}
+function xiangjiao(when,kind,v){ // elephant-foot drum: 'low' open tone or 'slap'
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';
+  const f0=kind==='low'?190:330, f1=kind==='low'?82:210;
+  o.frequency.setValueAtTime(f0,when);o.frequency.exponentialRampToValueAtTime(f1,when+(kind==='low'?.12:.05));
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+(kind==='low'?.55:.18));
+  o.connect(g);g.connect(T.duck);o.start(when);o.stop(when+.6);
+  noiseHit(when,'bandpass',kind==='low'?700:1800,1.2,v*(kind==='low'?.25:.6),kind==='low'?.04:.06,T.duck);
+}
+function mang(m,when,v,dec){ // small tuned gong
+  const f=mtoh(m),c=ctx.createOscillator(),md=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain();
+  c.type='sine';c.frequency.value=f;md.type='sine';md.frequency.value=f*2.76;mg.gain.setValueAtTime(f*1.1,when);mg.gain.exponentialRampToValueAtTime(f*.08,when+dec);
+  md.connect(mg);mg.connect(c.frequency);
+  const b=ctx.createOscillator(),bg=ctx.createGain();b.type='sine';b.frequency.value=f*1.004;bg.gain.value=.5;b.connect(bg);bg.connect(g);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.003);g.gain.exponentialRampToValueAtTime(.0001,when+dec);
+  c.connect(g);dkOut(g,false);[c,md,b].forEach(o=>{o.start(when);o.stop(when+dec+.05);});
+}
+function bigGong(when,count,root){ for(let i=0;i<count;i++){ const w=when+i*.55; mang(root-12,w,.22,4.5); mang(root,w,.1,3); noiseHit(w,'lowpass',500,.6,.25,.4,MASTER);} }
+function dkPhraseNote(local,f,SN,tier,tD,when){
+  const R=DK.rhy; let on=0,k=-1,ni=0,dur8=0;
+  for(let i=0;i<R.length;i++){ const L=Math.abs(R[i]); if(R[i]>0){ if(local===on){k=ni;dur8=L;break;} ni++; } on+=L*2; }
+  if(k<0) return null;
+  const NN=R.filter(x=>x>0).length, M=DK.motif, half=Math.floor(((tick-DK.phr0)%64+64)%64/32);
+  if(tier===0&&dur8<=1) return {skip:true};
+  let d=DK.vari.inv?M[0]-(M[k]-M[0]):M[k];
+  d+=DK.vari.shift+(DK.climbShift||0);
+  const end=k===NN-1;
+  if(end) d=dkTarget(d,half===0?'q':'home');
+  const TR=sect().tr; let m=midiOf(d)+TR; while(m>81) m-=12; while(m<57) m+=12;
+  const v=(SN===1?.17:SN===2?.1:.075)*(tier===0?.75:tier===1?1:1.12)*(DK.leadBoost||1);
+  const dur=dur8*TICK*2;
+  dkLead(m,when,v,dur,SN);
+  if(DK.peakLayers){ hulusi(m-12,when,v*.7,Math.max(.3,dur),true); hulusi(m+12,when,v*.45,Math.max(.3,dur),false); dkGlass(m+12,when,v*.4,dur); }
+  if(tier===2&&dur8>=3) dkLead(midiOf(d+1)+TR,when+dur*.5,v*.55,dur*.4,SN);
+  if(SN===3&&dur8>=2){ const cd=M[0]-(M[k]-M[0])+DK.vari.shift+2; dkGlass(midiOf(cd)+TR+24,when+TICK*3,.025+.012*tier,dur); }
+  lastNote=d;lastNoteT=tD;
+  return {d,k,half,end};
+}
+function darkOutroStart(tD,w){
+  const diff=w-TARGET, ok=diff>=-10.5&&diff<=10.5, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  const c=ctx.currentTime+.03, hit=c+.25;
+  dkFx(); DK.fx.clearRev.gain.setValueAtTime(.06,c);
+  [T.rsG.gain,T.uwG.gain,T.uwF.frequency,MASTER.gain].forEach(p=>p.cancelScheduledValues(c));
+  T.rsG.gain.setValueAtTime(0,c); T.uwG.gain.setValueAtTime(0,c);           // everything stops
+  MASTER.gain.setValueAtTime(Math.max(.75,SECVOL[3]),c);
+  if(DK.yn){ DK.yn.rainG.gain.setValueAtTime(0,c); DK.yn.drG.gain.setValueAtTime(0,c); }
+  const TRx=sect().tr, lowM=midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
+  const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP); const es=ctx.createGain(); es.gain.value=.35; eb.connect(es); es.connect(DK.fx.rev);
+  // one gong, nothing else: crisp strike, rings and fades over ~5 s
+  { const f0=mtoh(lowM-12), parts=[[1,1,5],[1.48,.55,4.2],[2.0,.5,4.6],[2.76,.35,3.4],[3.42,.22,2.6],[4.1,.14,1.8],[.5,.45,5]];
+    parts.forEach(([r,a,dec],i)=>{const o=ctx.createOscillator(),g3=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f0*r*1.01,hit);o.frequency.exponentialRampToValueAtTime(f0*r,hit+.25);o.detune.value=i%2?4:-4;
+      g3.gain.setValueAtTime(0,hit);g3.gain.linearRampToValueAtTime(.32*a,hit+.004);g3.gain.exponentialRampToValueAtTime(.32*a*.35,hit+.6);g3.gain.linearRampToValueAtTime(.0001,hit+dec);
+      o.connect(g3);g3.connect(eb);o.start(hit);o.stop(hit+dec+.05);});
+    const n=ctx.createBufferSource();n.buffer=noiseBuf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=.9;const ng=ctx.createGain();
+    ng.gain.setValueAtTime(.5,hit);ng.gain.exponentialRampToValueAtTime(.0001,hit+.12);n.connect(bp);bp.connect(ng);ng.connect(eb);n.start(hit);n.stop(hit+.15); }
+  DK.title='终'; DK.titleT=tD; DK.titleKeep=true; flashCol='255,235,190';
+  setTimeout(()=>{flashV=1.8;},250);
+  DK.outro={t0:tick,ok,startT:tD};
+  setTimeout(()=>{ if(DK.fx) DK.fx.clearRev.gain.setValueAtTime(.25,ctx.currentTime); },6000);
+  const avg=X.pourTime>0?w/X.pourTime:0;
+  const sum='总水量 '+Math.round(w)+' g · 用时 '+ts+' · 注水平均 '+avg.toFixed(1)+' g/s'+(GENRE==='walker'?' · '+W.bpm+' BPM · '+W_KEYS[W.key]+' · '+(W.prog||W_PROGS[0]).map(wTr).join('–'):' · 动机 '+DK.motif.map(dkName).join(' '));
+  X.summary=sum; X.hold=tD+3; noteEl.textContent='终';
+  explain(ts+'　终：一声锣，余音约 5 秒。'+sum);
+  if(typeof status==='function'&&liveRunning) status('终 · '+sum);
+}
+function darkOutroTick(when,tD){ /* the final hit rings out by itself; nothing else plays */ }
+
+function dkTargetCues(when,w,tD,ts){
+  const g=Math.floor(w);
+  if(w>=TARGET-5&&w<TARGET&&g>(DK.lastGram||0)){ DK.lastGram=g; dkGlass(midiOf(0)+24+(TARGET-g<=1?5:0),when,.05,.6); explain(ts+'　还差 '+Math.ceil(TARGET-w)+' g'); X.hold=tD+.6; }
+  if(w>=TARGET&&!DK.hitTarget){ DK.hitTarget=true; const lowM=midiOf(0)+sect().tr; mang(lowM-12,when,.25,4); mang(lowM,when,.12,3);
+    DK.title='停';DK.titleT=tD; flashCol='255,240,200'; flashV=1.2; X.hold=tD+2;
+    explain(ts+'　到 '+TARGET+' g 了：一声锣，可以停手了'); }
+  const over=w-TARGET;
+  if(DK.yn){ const y=DK.yn, e=Math.max(0,Math.min(25,over-2));
+    y.dis.frequency.setTargetAtTime(mtoh(midiOf(0)+sect().tr-12)*Math.pow(2,1/12),when,.05);
+    y.disG.gain.setTargetAtTime(e>0?.006+.0016*e:0,when,.2);
+    y.dr.detune.setTargetAtTime(e*7,when,.3); y.dr2.detune.setTargetAtTime(-e*5,when,.3);
+    if(e>0){ T.uwF.frequency.setTargetAtTime(Math.max(900,9000-e*320),when,.3);
+      if(tick%8===0&&!(tD<(X.hold||0))) explain(ts+'　超过目标 '+Math.round(over)+' g：持续音开始走调，声音变闷（过萃）');
+      noteEl.textContent='过量'; } }
+}
+function subDrop(when){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(90,when);o.frequency.exponentialRampToValueAtTime(28,when+2.2);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.7,when+.02);g.gain.exponentialRampToValueAtTime(.0001,when+2.6);o.connect(g);g.connect(MASTER);o.start(when);o.stop(when+2.7);}
+function choir(ms,when,dur,v){ // formant "ah" voices, slow swell
+  const out=ctx.createGain();out.gain.setValueAtTime(0,when);out.gain.linearRampToValueAtTime(v,when+.6);out.gain.setValueAtTime(v,when+dur*.85);out.gain.linearRampToValueAtTime(0,when+dur+.8);
+  const f1=ctx.createBiquadFilter(),f2=ctx.createBiquadFilter();f1.type='bandpass';f1.frequency.value=750;f1.Q.value=5;f2.type='bandpass';f2.frequency.value=1200;f2.Q.value=6;
+  const mixg=ctx.createGain();mixg.gain.value=2.2;f1.connect(mixg);f2.connect(mixg);mixg.connect(out);
+  ms.forEach(m=>[-12,-4,5,13].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(f1);o.connect(f2);o.start(when);o.stop(when+dur+1);}));
+  clearCall(()=>dkOut(out,false));}
+function dkClimax(when,tD,w,f,s16,root,TR,tier,ts){
+  const pk=DK.pk||TARGET*.88, p0=DK.p0||pk-40, L=Math.max(4,TARGET-pk);
+  if(w<p0){ DK.climbShift=0; return false; }
+  const lowM=midiOf(0)+TR;
+  if(!DK.peaked){
+    const cl=Math.min(1,(w-p0)/(pk-p0)), left=pk-w;
+    // half a beat of silence right before the peak
+    if(left>0&&left<Math.max(.9,f*.45)){
+      if(!DK.gap){DK.gap=true;const c=ctx.currentTime;T.uwG.gain.cancelScheduledValues(c);T.uwG.gain.setTargetAtTime(0,c,.01);T.rsG.gain.setTargetAtTime(0,c,.01);if(DK.yn)DK.yn.drG.gain.setTargetAtTime(0,c,.01);
+        noteEl.textContent='屏息';explain(ts+'　屏息：还差 '+left.toFixed(1)+' g 到顶点');}
+      return true;
+    }
+    if(left<=0){
+      DK.peaked=true;DK.gap=false;DK.peakT=tD;const c=when;MASTER.gain.cancelScheduledValues(c);MASTER.gain.setValueAtTime(Math.min(1.4,SECVOL[3]*1.35),c);DK.leadBoost=1.8;
+      T.uwG.gain.cancelScheduledValues(c);T.uwG.gain.setValueAtTime(1,c);T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setValueAtTime(20000,c);
+      if(DK.yn){DK.yn.drG.gain.setValueAtTime(.035,c);}
+      [0,7,12].forEach(k=>mang(lowM-12+k,c,.3,6));tKick(c);tSub(root-12,c,.5,3);subDrop(c);choir(chordAt(0,TR).concat([chordAt(0,TR)[0]+12]),c,TICK*64,.07);noiseHit(c,'lowpass',500,.6,.4,.6,MASTER);dropHit(c);tSub(root,c,.6,2.5);
+      tStab(chordAt(0,TR-12).concat(chordAt(0,TR)),c,.05,TICK*32,3500);
+      DK.peakLayers=true;DK.climbShift=Math.max(DK.climbShift||0,3);
+      flashCol='255,215,120';flashV=1.6;DK.title='顶点';DK.titleT=tD;X.hold=tD+2;
+      explain(ts+'　顶点！'+Math.round(w)+' g：三声大锣、超低频下坠、合唱和声，底鼓加倍，葫芦丝三个八度');
+    } else {
+      // climb: riser by grams, snare roll tightening, hats to 16ths, motif stepping up
+      DK.climbShift=Math.floor(cl*3); DK.leadBoost=1+.5*cl; MASTER.gain.setTargetAtTime(SECVOL[3]*(1+.15*cl),when,.2);
+      T.rsF.frequency.setTargetAtTime(300*Math.pow(2,cl*4.6),when,.08);T.rsG.gain.setTargetAtTime(.03+.13*cl*cl,when,.08);
+      const iv=cl<.35?4:cl<.7?2:1; if(tick%iv===0) noiseHit(when,'bandpass',1900+cl*900,.8,.05+.16*cl,.07,T.duck);
+      if(cl<.7){ if(tick%4===0) tKick(when); if(tick%4!==0) tRumble(root+12,when,.5); }
+      if(s16===4||s16===12) clap(when,.28);
+      tHat(when,tick%4===2?.09:(cl>.3?.04+.03*cl:0.001),false);
+      if(tick%2===0) mang(lowM+[12,15,19,24][(tick>>1)%4]+(cl>.6?12:0),when,.03+.04*cl,.5);
+      flashCol='255,'+Math.round(170+60*cl)+','+Math.round(60+60*cl);
+      if(tick%8===0&&!(tD<(X.hold||0))) explain(ts+'　攀升：距离顶点还有 '+Math.max(0,left).toFixed(0)+' g · 蓄力 '+Math.round(cl*100)+'%');
+      noteEl.textContent='攀升';
+      return true;
+    }
+  }
+  // peak & landing, peeled off by grams
+  const hold=tD-(DK.peakT||0)<TICK*64;
+  if(!hold&&DK.wAtHoldEnd===undefined) DK.wAtHoldEnd=Math.max(0,w-pk);
+  const off=DK.wAtHoldEnd||0, lp=hold?0:Math.min(1,Math.max(0,(w-pk-off)/Math.max(4,L-off)));
+  if(lp>=.25) DK.peakLayers=false;
+  DK.climbShift=Math.round(3*(1-lp));
+  if(lp<.25){ // full peak
+    if(hold&&tick%2===0) tKick(when,tick%4!==0); else if(tick%4===0||s16===14||s16===7) tKick(when);
+    if(hold&&tick%4===0) flashV=1.3;
+    if(tick%4!==0) tRumble(root+12,when,.6);
+    if(s16===4||s16===12) clap(when,.34);
+    tHat(when,tick%4===2?.11:.05,tick%8===6);
+    if(tick%2===0) mang(lowM+[12,19,24,31][(tick>>1)%4],when,.06,.6);
+    if(s16===0) tStab(chordAt(dkChordRoot(3),TR),when,.04,TICK*16,3500);
+    const XJ={3:'low',6:'slap',10:'slap',11:'low',14:'slap'}; if(XJ[s16]) xiangjiao(when,XJ[s16],.32);
+    noteEl.textContent='顶点'; DK.leadBoost=1.8; if(s16===0) MASTER.gain.setTargetAtTime(Math.min(1.4,SECVOL[3]*1.3),when,.1);
+  } else {
+    if(lp<.5){ if(tick%4===0) tKick(when); if(tick%4!==0) tRumble(root+12,when,.5); if(s16===4||s16===12) clap(when,.24); }
+    else if(lp<.75){ if(tick%4===0) tKick(when,true); if(s16===3||s16===11) xiangjiao(when,'low',.25); }
+    else if(lp<1){ if(tick%8===0) tKick(when,true); if(s16===6) xiangjiao(when,'slap',.15); }
+    const stage=lp<.5?1:lp<.75?2:lp<1?3:4; MASTER.gain.setTargetAtTime(SECVOL[3]*[0,1.15,1,.85,.7][stage],when,.6); DK.leadBoost=[1,1.6,1.45,1.3,1.2][stage];
+    if(stage!==DK.landStage){DK.landStage=stage;
+      if(!(tD<(X.hold||0))) explain(ts+'　落地 '+Math.round(w)+' g：'+['','踩镲退场','低频退场，只剩底鼓和象脚鼓','底鼓变成半速','只剩葫芦丝和它的持续音'][stage]);
+      if(!(tD<(X.hold||0))) X.hold=tD+1.2;}
+    if(!DK.hitTarget) noteEl.textContent='落地';
+  }
+  return true;
+}
+function dkMelody(when,tD,f,SN,tier,energy,ts,w){
+  const TR=sect().tr, s16=((tick%16)+16)%16;
+  // ---- melody
+  let why='';
+  if(SN===1&&DK.motif.length<6){
+    if(tD-X.pourStart>.6&&tick%4===0){
+      const wob=f-meanFlow(tD,1), ctr=Math.max(-2,Math.min(2,Math.round(wob/.08)));
+      let d=1+Math.round(energy*4)+ctr; const M=DK.motif;
+      if(M.length===0) d=dkTarget(d,'home')+ (d>dkTarget(d,'home')?0:0);
+      else { const pv=M[M.length-1]; if(Math.abs(d-pv)>3) d=pv+Math.sign(d-pv)*3;
+        if(M.length>=2&&d===pv&&pv===M[M.length-2]) d+=(f-sample(tD-.3).f)>=0?1:-1; }
+      M.push(d); dkLead(midiOf(d)+TR,when,.18,TICK*6,1); lastNote=d;lastNoteT=tD;
+      if(M.length===6){ DK.rhy=RHY[Math.floor(X.center*10)%3]; DK.phr0=tick+ (16-s16)%16; }
+      why='你的手正在写动机：第 '+M.length+' 个音 '+dkName(d)+'（流速 '+f.toFixed(1)+' g/s，手的起伏 '+(wob>=0?'+':'')+wob.toFixed(2)+'）→ '+M.map(dkName).join(' ');
+      if(!(tD<(X.hold||0))) explain(ts+'　'+why);
+    }
+  } else if(DK.motif.length){
+    const pp=((tick-DK.phr0)%64+64)%64, local=pp%32;
+    if(tick>=DK.phr0){
+      if(local===0){ const shift=Math.max(-2,Math.min(3,Math.round((meanFlow(tD,1.5)-X.center)/.5)));
+        const inv=(f-sample(tD-1.5).f)<-.3; DK.vari={shift:SN===2?shift-0:shift,inv};
+        if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' · '+(pp<32?'问句':'答句')+'：动机'+(shift?(shift>0?'移高 ':'移低 ')+Math.abs(shift)+' 级':'原位')+(inv?' · 倒影（在减速）':'')+' · '+['轻','中','猛'][tier]+' · 已注 '+Math.round(w)+' / '+TARGET+' g'); }
+      dkPhraseNote(local,f,SN,tier,tD,when);
+    }
+  }
+}
+function onTickDark(when,tD){
+  const sm=sample(tD), w=sm.w, realPour=sm.f>=THR, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  if(DK.outro){ darkOutroTick(when,tD); return; }
+  if(X.ended) return;
+  if(realPour){ DK.lastPourT=tD; DK.lastF=sm.f; }
+  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<3;
+  if(breath&&seg>=3&&(DK.peaked||w>=TARGET-10)&&sinceStop>=.6){ playEnding(tD,w); return; }
+  const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
+  if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); if(breath&&!DK.breathMsg){DK.breathMsg=true;if(!(tD<(X.hold||0)))explain(ts+'　换气：短暂停顿，音乐稍微变轻但不中断');} if(realPour) DK.breathMsg=false; }
+  const n=degs().length;
+  if(!pouring){
+    if(inPhrase){inPhrase=false;stopT=DK.lastPourT??tD;X.lastEndT=tD;DK.waitT0=tick+16;const c=ctx.currentTime;
+      T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(160,c,.03);T.uwG.gain.setTargetAtTime(.12,c,.04);
+      ynSet(.008,.015,c); DK.gap=false;
+      explain(ts+'　停手：沉到水下，几乎安静'+(DK.motif.length?'。这一杯的动机：'+DK.motif.map(dkName).join(' '):''));}
+    if(stopT<=0) return;
+    const wait=Math.max(0,tD-stopT);
+    if(seg>=3&&(DK.peaked||w>=TARGET-10)&&wait>=.6){playEnding(tD,w);return;}
+    T.uwG.gain.setTargetAtTime(.12*(wait<30?1:Math.max(0,1-(wait-30)/12)),when,.3);
+    if(tick%8===0&&wait<30) waitBeat(when);
+    const rise=wait<12?0:Math.min(1,(wait-12)/13);
+    T.rsF.frequency.setTargetAtTime(Math.min(7000,260*Math.pow(2,Math.min(wait,25)/5.2)),when,.1);
+    T.rsG.gain.setTargetAtTime(.1*rise,when,.1);
+    if(seg===1){const h=((tick*2654435761)>>>0)%1000, dens=Math.max(10,90*Math.exp(-wait/9)); if(h<dens) drip(when,.02);}
+    if(tick%16===0) explain(ts+'　水下等待 '+wait.toFixed(0)+' 秒，蓄力 '+Math.round(rise*100)+'%（已注 '+Math.round(w)+' / '+TARGET+' g）');
+    return;
+  }
+  X.pourTime+=TICK;
+  if(!inPhrase) X.pourStart=tD;
+  if(tD-X.pourStart>1){ if(!X.cal){X.cs+=f;X.cn++; if(X.cn>=12){X.center=X.cs/X.cn;X.cal=true;}} else X.center+=(f-X.center)*(TICK/12); }
+  X.center=Math.max(2.5,Math.min(6.5,X.center));
+  const energy=Math.max(0,Math.min(1,(f-(X.center-1.2))/2.4));
+  emaN+=(energy-emaN)*.25;
+  let tier=X.tier<0?(emaN<.33?0:emaN<.66?1:2):X.tier;
+  if(X.tier>=0){ if(tier<2&&emaN>[.39,.72][tier]) tier++; else if(tier>0&&emaN<[0,.27,.6][tier]) tier--; }
+  const SN=Math.max(1,Math.min(3,seg)), TR=sect().tr;
+  if(!inPhrase&&DK.startedSeg===seg){
+    inPhrase=true;X.tier=tier;
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    ynSet(SN===1?.005:SN===2?.004:0, SN===1?.015:SN===2?.012:.02, when);
+    const kT=TARGET/240, need=[0,30*kT,110*kT][Math.min(2,seg)];
+    X.hold=tD+1.5; explain(ts+'　继续'+sect().name+'（累计 '+Math.round(w)+' g，'+(seg<3?'到 '+Math.round(need)+' g 并停手 3 秒以上才进入下一段':'最后一段')+'）');
+  } else if(!inPhrase){
+    inPhrase=true;X.tier=tier;DK.startedSeg=seg;
+    const waited=Math.max(0,tD-stopT);
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    MASTER.gain.cancelScheduledValues(when);MASTER.gain.setTargetAtTime(SECVOL[SN],when,SN===1?.3:.05);
+    if(SN===3){const fl=Math.max(2.5,Math.min(6,X.center)); DK.pk=TARGET-Math.max(30,Math.min(65,fl*13)); DK.p0=DK.pk-fl*10; if(DK.p0<w+4) DK.p0=w+4; if(DK.pk<DK.p0+8) DK.pk=Math.min(TARGET-8,DK.p0+8);}
+    bigGong(when,SN,midiOf(0)+TR);
+    if(SN===3){ dropHit(when+1.1); }
+    ynSet(SN===1?.005:SN===2?.004:0, SN===1?.015:SN===2?.012:.02, when, midiOf(0)+TR-12);
+    DK.title=sect().name.split(' · ')[1]; DK.titleT=tD;
+    if(SN>=2&&DK.motif.length<6){const M=DK.motif; if(!M.length) M.push(0); while(M.length<6) M.push(M[M.length-1]+(M.length%2?1:-1)); DK.rhy=RHY[Math.floor(X.center*10)%3];}
+    DK.prog=progTable()[SN][(DK.motif.length?DK.motif[0]+DK.motif.length:0)%2];
+    DK.phr0=0; DK.vari={shift:0,inv:false};
+    flashCol=['','90,210,180','215,110,70','255,170,60'][SN]; dkEcho(); dkPrevLead=null;
+    X.hold=tD+1.5;
+    explain(ts+'　'+sect().name+'：'+sect().desc+(stopT>0?'（释放 '+waited.toFixed(0)+' 秒的蓄力）':''));
+  } else if(tier!==X.tier){
+    if(tier>X.tier){ if(SN>=2) tFill(when); } else if(SN>=2) tDown(when);
+    X.hold=tD+1; explain(ts+'　'+(tier>X.tier?'加快 → ':'放慢 → ')+['轻：乐器收到最少，旋律只唱长音','中：标准编制','猛：全部打开，旋律加装饰音'][tier]+'（'+f.toFixed(1)+' g/s）');
+    X.tier=tier;
+  }
+  const s16=((tick%16)+16)%16, r=dkChordRoot(SN), ch=chordAt(r,TR), root=ch[0]-24;
+  // ---- harmony bed
+  if(s16===0&&(Math.floor(tick/16)%2===0)) dkPad(r,TR,SN,tier,when,TICK*32);
+  // ---- climax by weight: climb (75%→92%), peak, landing (92%→100%)
+  if(SN===3&&dkClimax(when,tD,w,f,s16,root,TR,tier,ts)) { dkMelody(when,tD,f,SN,tier,energy,ts,w); if(tick%4===0) ringAt(tD,f,s16===0?1.5:.9); return; }
+  // ---- drums & bass by section role
+  const lowM=midiOf(0)+TR;
+  if(SN===1){
+    if(s16===0&&Math.floor(tick/16)%2===0) tSub(root+12,when,.11,TICK*30);
+    { const h=((tick*2654435761)>>>0)%1000; if(h<(tier===2?70:tier===1?45:25)) drip(when,.03); }
+    if(tier>=1&&s16===8&&Math.floor(tick/16)%2===1) mang(lowM+12,when,.04,1.8);
+  } else if(SN===2){
+    const XJ={0:'low',3:'low',6:'slap',8:'low',10:'slap',12:'low',14:'slap'};
+    if(XJ[s16]) xiangjiao(when,XJ[s16],XJ[s16]==='low'?.5:.32);
+    if(tier>=1&&(s16===7||s16===15)) xiangjiao(when,'slap',.18);
+    if(s16===4) mang(lowM+12,when,.06,1.2); if(s16===12) mang(lowM+19,when,.055,1.2);
+    if(tier===2&&(s16===2||s16===10)) mang(lowM+24,when,.035,.8);
+    if(s16===0) tSub(root+12,when,.3,TICK*12); if(s16===10&&tier>=1) tSub(root+12,when,.22,TICK*4);
+  } else {
+    if(tick%4===0||s16===14) tKick(when);
+    if(tick%4!==0) tRumble(root+12,when,.55);
+    if(s16===4||s16===12) clap(when,.26);
+    if(tick%4===2) tHat(when,.09,false); else if(tier>=1&&tick%4!==0) tHat(when,.04,false);
+    const XJ={3:'low',6:'slap',10:'slap',11:'low',14:'slap'};
+    if(XJ[s16]) xiangjiao(when,XJ[s16],.3);
+    if(tick%4===2) mang(lowM+([12,19,24,19][(tick>>2)%4]),when,.045+.01*tier,.9);
+    if((tick%128)>=112) noiseHit(when,'bandpass',1900,.8,.04+.02*(tick%128-112)/2,.08,T.duck);
+  }
+  dkMelody(when,tD,f,SN,tier,energy,ts,w);
+  if(tick%4===0) ringAt(tD,f,s16===0?1.3:.8);
+}
+
+
+/* ================= v4.0 · melodic electronic engine =================
+   one language (minor i–VI–III–VII family, pentatonic C E♭ F G B♭ melody cells), the cup chooses everything inside it */
+const W={bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,hold:null};
+function wReset(){Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null});}
+const W_PROGS=[['Cm','Ab','Eb','Bb'],['Cm','Bb','Ab','Bb'],['Ab','Bb','Cm','Cm'],['Cm','Eb','Bb','Ab']];
+const W_CH={Cm:[48,55,60,63,67],Ab:[44,51,56,60,63],Eb:[51,55,58,63,67],Bb:[46,53,58,62,65]};
+const W_CELLS={
+ Cm:[[[0,2],[1,1],[0,1],[-1,2],[-2,2]],[[-2,1],[-1,1],[0,2],[1,3],[0,1]],[[1,3],[2,1],[1,2],[0,2]]],
+ Ab:[[[null,1],[0,1],[1,2],[0,2],[-1,2]],[[1,2],[2,1],[1,1],[0,4]],[[0,1],[-1,1],[-2,2],[-1,1],[0,1],[1,2]]],
+ Eb:[[[-2,1],[-1,1],[1,2],[2,1],[1,1],[-1,2]],[[-1,3],[-2,1],[-1,2],[1,2]],[[1,1],[2,1],[3,2],[2,2],[1,2]]],
+ Bb:[[[2,3],[1,1],[0,2],[-1,2]],[[-1,2],[0,1],[1,1],[2,4]],[[2,1],[1,1],[2,2],[-1,4]]]};
+const W_KEYS={0:'C 小调',2:'D 小调','-3':'A 小调','-2':'B♭ 小调'};
+const NN12=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+function wK(m){return m+W.key;}
+function wDeg(d){ // pentatonic degree (C5 = 0) → the selected scale; Yunnan is the tuned one
+  const D=(scale.deg2&&seg>=2)?scale.deg2:scale.deg, n=D.length;
+  if(n===5) return 72+12*Math.floor(d/5)+D[((d%5)+5)%5];
+  const st=Math.round(d*n/5); return 72+12*Math.floor(st/n)+D[((st%n)+n)%n]; }
+function wTr(name){const roots={C:0,Ab:8,Eb:3,Bb:10};const minor=name.endsWith('m');const base=minor?name.slice(0,-1):name;return ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'][(roots[base]+W.key+120)%12]+(minor?'m':'');}
+function wChord(b){const pr=W.prog||W_PROGS[0];return W_CH[pr[((b%4)+4)%4]].map(wK);}
+function wChordName(b){const pr=W.prog||W_PROGS[0];return pr[((b%4)+4)%4];}
+function wCell(b,f,tD){ // choose (once) the cell for hook bar b from the hand at this moment
+  const i=((b%8)+8)%8;
+  if(!W.hook[i]){ const wob=f-meanFlow(tD,1), k=Math.max(0,Math.min(2,Math.round(wob/.08)+1));
+    let c=W_CELLS[wChordName(i)][k].map(x=>x.slice()); if(i===7){for(let j=c.length-1;j>=0;j--) if(c[j][0]!==null){c[j][0]=0;break;}}
+    W.hook[i]=c; W.hookWhy=(W.hookWhy||[]); W.hookWhy[i]=k; }
+  return W.hook[i];
+}
+function wOut(g,duck){ dkFx(); if(duck) g.connect(T.duck); else { g.connect(DK.fx.in); g.connect(DK.fx.send); } }
+function wPiano(m,when,dur,v){
+  const f=mtoh(m), out=ctx.createGain(); out.gain.value=v; wOut(out,false);
+  for(let h=1;h<=8;h++){ const fh=f*h*(1+.0003*h*h); if(fh>9000) break; const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=fh;
+    const dec=1/((.6+.5*h)*(1+f/1500)); g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(1/Math.pow(h,1.3),when+.003);g.gain.setTargetAtTime(0,when+.003,dec);
+    g.gain.setTargetAtTime(0,when+dur+.2,.15); o.connect(g);g.connect(out);o.start(when);o.stop(when+dur+1.4);} }
+function wPluck(m,when,dur,v){
+  const f=mtoh(m), fl=ctx.createBiquadFilter(), g=ctx.createGain(); fl.type='lowpass';fl.Q.value=1.2;
+  fl.frequency.setValueAtTime(8000,when);fl.frequency.exponentialRampToValueAtTime(1200,when+.25);
+  const L=Math.max(.2,dur)+.3; g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.003);g.gain.setTargetAtTime(v*.55,when+.01,.18);g.gain.setTargetAtTime(0,when+L-.25,.08);
+  [-14,-5,5,14].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=d;const og=ctx.createGain();og.gain.value=.25;o.connect(og);og.connect(fl);o.start(when);o.stop(when+L);});
+  const sq=ctx.createOscillator();sq.type='square';sq.frequency.value=f/2;const sg2=ctx.createGain();sg2.gain.value=.3;sq.connect(sg2);sg2.connect(fl);sq.start(when);sq.stop(when+L);
+  fl.connect(g); wOut(g,false); }
+function wLead(m,when,dur,SN,peak){
+  if(W.bright){ wPluck(m,when,dur,.11); wPluck(m+12,when,dur,.045); }
+  else { wPiano(m,when,dur,.16); wPiano(m+12,when,dur,.04); if(SN===3) wPluck(m,when,dur,.07); }
+  if(peak){ wPluck(m-12,when,dur,.06); wPluck(m+12,when,dur,.04); }
+}
+function wSaws(ms,when,dur,v,cut,detunes,att,duck){
+  const fl=ctx.createBiquadFilter(),g=ctx.createGain();fl.type='lowpass';fl.frequency.value=cut;fl.Q.value=.7;
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+att);g.gain.setValueAtTime(v,when+Math.max(att,dur-.15));g.gain.linearRampToValueAtTime(0,when+dur+.25);
+  ms.forEach(m=>detunes.forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);o.stop(when+dur+.3);}));
+  fl.connect(g); wOut(g,duck); return {fl,g}; }
+function wBass(m,when,dur,v){
+  const fl=ctx.createBiquadFilter(),g=ctx.createGain(),sh=shaper(1.6);fl.type='lowpass';fl.frequency.value=900;
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.005);g.gain.setValueAtTime(v,when+dur*.85);g.gain.linearRampToValueAtTime(0,when+dur);
+  const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);const o2=ctx.createOscillator();o2.type='sine';o2.frequency.value=mtoh(m);
+  const g1=ctx.createGain();g1.gain.value=.5;o.connect(g1);g1.connect(fl);o2.connect(fl);fl.connect(sh);sh.connect(g);wOut(g,true);
+  o.start(when);o2.start(when);o.stop(when+dur+.05);o2.stop(when+dur+.05); }
+function wWaitPad(on,when){
+  if(on&&!W.waitPad){ const ch=wChord(Math.max(0,Math.floor(tick/16))); const fl=ctx.createBiquadFilter(),g=ctx.createGain();fl.type='lowpass';fl.frequency.value=480;
+    g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.05,when+1.2); const os=[];
+    ch.slice(1).forEach(m=>[-8,8].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);os.push(o);}));
+    fl.connect(g); g.connect(MASTER); W.waitPad={g,os}; }
+  if(!on&&W.waitPad){ const p=W.waitPad; W.waitPad=null; p.g.gain.cancelScheduledValues(when); p.g.gain.setTargetAtTime(0,when,.15); p.os.forEach(o=>o.stop(when+1)); }
+}
+function onTickWalker(when,tD){
+  technoSetup(); dkFx();
+  const sm=sample(tD), w=sm.w, realPour=sm.f>=THR, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
+  tick++;
+  if(DK.outro){ return; }
+  if(X.ended) return;
+  if(realPour){ DK.lastPourT=tD; DK.lastF=sm.f; }
+  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<3;
+  if(breath&&seg>=3&&(W.peaked||w>=TARGET-10)&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
+  const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
+  if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); }
+  const SN=Math.max(1,Math.min(3,seg));
+  // ---------- waiting: muffled chord + heartbeat, riser after 12 s, no melody
+  if(!pouring){
+    if(inPhrase){ inPhrase=false; stopT=DK.lastPourT??tD; const c=ctx.currentTime;
+      T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(220,c,.05);T.uwG.gain.setTargetAtTime(.15,c,.05);
+      if(seg===1&&!W.brightSet){ W.bright=(W.s1flow.length?W.s1flow.reduce((a,b)=>a+b,0)/W.s1flow.length:4)>4.2; W.brightSet=true; }
+      wWaitPad(true,c);
+      explain(ts+'　停手：间奏。只剩闷闷的长和弦和心跳'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
+    if(stopT<=0) return;
+    const wait=Math.max(0,tD-stopT);
+    if(seg>=3&&(W.peaked||w>=TARGET-10)&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
+    if(tick%8===0&&wait<40) waitBeat(when);
+    const rise=wait<12?0:Math.min(1,(wait-12)/13);
+    T.rsF.frequency.setTargetAtTime(Math.min(7000,300*Math.pow(2,rise*4.2)),when,.1); T.rsG.gain.setTargetAtTime(.07*rise,when,.1);
+    if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　间奏 '+wait.toFixed(0)+' 秒（已注 '+Math.round(w)+' / '+TARGET+' g）');
+    return;
+  }
+  X.pourTime+=TICK;
+  if(!inPhrase) X.pourStart=tD;
+  if(tD-X.pourStart>1){ if(!X.cal){X.cs+=f;X.cn++; if(X.cn>=12){X.center=X.cs/X.cn;X.cal=true;}} else X.center+=(f-X.center)*(TICK/12); }
+  X.center=Math.max(2.5,Math.min(6.5,X.center));
+  const energy=Math.max(0,Math.min(1,(f-(X.center-1.2))/2.4)); emaN+=(energy-emaN)*.25;
+  let tier=X.tier<0?(emaN<.33?0:emaN<.66?1:2):X.tier;
+  if(X.tier>=0){ if(tier<2&&emaN>[.39,.72][tier]) tier++; else if(tier>0&&emaN<[0,.27,.6][tier]) tier--; }
+  if(seg===1){ W.s1flow.push(f); if(tD-X.pourStart>.9) W.wobs.push(f-meanFlow(tD,1)); }
+  // ---------- decide tempo, key, chord loop ~2 s into the first pour
+  if(seg===1&&!W.decided&&tD-X.pourStart>=2){
+    const bl=meanFlow(tD,1); W.bpm=Math.round(88+12*Math.max(0,Math.min(1,(bl-3.2)/2))); W.key=[0,2,-3,-2][Math.floor(bl*3)%4];
+    const m=W.wobs.reduce((a,b)=>a+b,0)/Math.max(1,W.wobs.length), sd=Math.sqrt(W.wobs.reduce((a,b)=>a+(b-m)*(b-m),0)/Math.max(1,W.wobs.length));
+    W.prog=W_PROGS[Math.floor(sd*40)%4]; W.decided=true; TICK=60/W.bpm/4; nextTickD=tD; tick=-1;
+    explain(ts+'　这一杯定下来了：闷蒸 '+bl.toFixed(1)+' g/s → '+W.bpm+' BPM、'+W_KEYS[W.key]+'；手的起伏 '+sd.toFixed(2)+' → 和弦 '+W.prog.map(wTr).join('–')); X.hold=tD+2.5; return;
+  }
+  // ---------- section start / resume
+  if(!inPhrase&&DK.startedSeg===seg){
+    inPhrase=true;X.tier=tier; wWaitPad(false,when);
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    X.hold=tD+1.5; explain(ts+'　继续'+sect().name);
+  } else if(!inPhrase){
+    inPhrase=true;X.tier=tier;DK.startedSeg=seg; wWaitPad(false,when);
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    MASTER.gain.cancelScheduledValues(when);MASTER.gain.setTargetAtTime(SECVOL[SN],when,SN===1?.3:.05);
+    if(SN===3){const fl=Math.max(2.5,Math.min(6,X.center)); DK.pk=TARGET-Math.max(30,Math.min(65,fl*13)); DK.p0=DK.pk-fl*10; if(DK.p0<w+4) DK.p0=w+4; if(DK.pk<DK.p0+8) DK.pk=Math.min(TARGET-8,DK.p0+8);}
+    for(let i=0;i<SN;i++) mang(wK(48),when+i*.5,.22,4);
+    if(SN===3) dropHit(when);
+    DK.title=sect().name.split(' · ')[1]; DK.titleT=tD; flashCol=['','140,200,255','235,240,255','255,190,110'][SN];
+    X.hold=tD+1.5; explain(ts+'　'+sect().name+'：'+sect().desc);
+  } else if(tier!==X.tier){ X.tier=tier; }
+  const s16=((tick%16)+16)%16, b=Math.floor(Math.max(0,tick)/16), ch=wChord(b), root=ch[0];
+  const beat=TICK*4, e8=TICK*2, BARd=TICK*16;
+  // ---------- section 3 climax state (by grams, only in the third pour)
+  let phase='drop';
+  if(SN===3){
+    if(!W.peaked){
+      if(w>=DK.p0) phase='build';
+      const left=DK.pk-w;
+      if(left>0&&left<Math.max(.9,f*.45)){ if(!W.gap){W.gap=true;const c=ctx.currentTime;T.uwG.gain.setTargetAtTime(0,c,.01);explain(ts+'　屏息');} return; }
+      if(left<=0){ W.peaked=true;W.gap=false;W.peakTick=tick; T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+        MASTER.gain.cancelScheduledValues(when);MASTER.gain.setValueAtTime(Math.min(1.4,SECVOL[3]*1.35),when);
+        dropHit(when); [0,7,12].forEach(k=>mang(wK(48)+k,when,.28,5)); subDrop(when);
+        DK.title='顶点';DK.titleT=tD;flashCol='255,215,120';flashV=1.6;X.hold=tD+2; explain(ts+'　顶点！'+Math.round(w)+' g：重击、三锣齐响、合唱，旋律三个八度'); }
+    }
+    if(W.peaked){ const since=tick-W.peakTick; phase=since<64?'peak':'land'; }
+  }
+  // ---------- arrangement per section
+  if(SN===1){
+    if(s16===0){ wSaws(ch.slice(1),when,BARd,.03,1000,[-8,0,8],.8,false); ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*.012,BARd*.9,.05)); wBass(root,when,BARd*.95,.12);
+      if(W.decided){ const cell=wCell(b,f,tD).filter(x=>x[0]!==null); const two=cell.slice().sort((a,c)=>c[1]-a[1]).slice(0,2).sort((a,c)=>cell.indexOf(a)-cell.indexOf(c));
+        two.forEach((x,i)=>wPiano(wK(wDeg(x[0])),when+i*BARd/2,BARd/2,.15));
+        explain(ts+'　前奏第 '+(b+1)+' 小节：'+wTr(wChordName(b))+'，手的起伏选了第 '+((W.hookWhy||[])[b%8]+1)+' 种句型，钢琴弹出其中最长的两个音'); } }
+  } else {
+    if(s16===0){
+      const peak=phase==='peak', build=phase==='build';
+      if(SN===2) wSaws(ch.slice(1),when,BARd,.03,1500,[-8,0,8],.6,true);
+      else { const o=wSaws(ch.slice(1),when,BARd,peak?.045:.035,build?900:(peak?5200:4000),[-18,-9,-3,3,9,18],.01,true);
+        if(build){ o.fl.frequency.setValueAtTime(700,when); o.fl.frequency.exponentialRampToValueAtTime(3500,when+BARd); }
+        if(phase!=='land') choir([ch[2]+12,ch[3]+12],when,BARd,peak?.09:.05); }
+      // melody: the cup's hook, one cell per bar
+      const cell=wCell(b,f,tD); let t=when;
+      cell.forEach(([m,ln])=>{ if(m!==null) wLead(wK(wDeg(m)),t,ln*e8,SN,peak); t+=ln*e8; });
+      if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(b%8+1)+' 小节：'+wTr(wChordName(b))+' · 句型 '+(((W.hookWhy||[])[b%8]??0)+1)+(SN===3?' · '+{drop:'Drop',build:'攀升',peak:'顶点',land:'落地'}[phase]:'')+' · 已注 '+Math.round(w)+' / '+TARGET+' g');
+    }
+    const kickOn = SN===2 ? (s16===0||s16===8) : (phase==='build' ? false : phase==='peak' ? (s16%4===0) : phase==='land' ? (s16===0 || (s16===8 && (tick-W.peakTick)<96)) : (s16===0||s16===8||(s16===14&&tier>=1)));
+    if(kickOn) tKick(when,true);
+    if(SN===2){ if(b>=1&&s16===12) clap(when,.22); if(s16%4===2) tHat(when,.06,false); if(s16%4===2) wBass(root+12,when,e8*.9,.16); }
+    else {
+      if(phase!=='build'){ if(s16===4||s16===12) clap(when,phase==='peak'?.32:.26); if(s16%4===2) tHat(when,.08,true);
+        if(phase!=='land'||(tick-W.peakTick)<80){ if(tier>=1||phase==='peak') tHat(when,.035,false); }
+        if(s16%2===0&&(phase!=='land'||(tick-W.peakTick)<88)) wBass(root+12*((s16/2)%2),when,e8*.9,.17); }
+      else { const cl=Math.max(0,Math.min(1,(w-DK.p0)/Math.max(1,DK.pk-DK.p0))), iv=cl<.4?4:cl<.75?2:1;
+        if(tick%iv===0) noiseHit(when,'bandpass',1900+cl*900,.8,.05+.15*cl,.07,T.duck);
+        T.rsF.frequency.setTargetAtTime(300*Math.pow(2,cl*4.6),when,.08); T.rsG.gain.setTargetAtTime(.03+.12*cl*cl,when,.08);
+        if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　攀升：距离顶点还有 '+Math.max(0,DK.pk-w).toFixed(0)+' g'); }
+      if(phase==='peak'&&s16===0) flashV=1.2;
+    }
+  }
+  if(tick%4===0) ringAt(tD,f,s16===0?1.3:.8);
+}
+
+/* ---------- visuals ---------- */
+const cv=document.getElementById('cv'), g=cv.getContext('2d');
+const stain=document.createElement('canvas'), sg=stain.getContext('2d');
+let dimV=0, S=0, rings=[], bubbles=[], drops=[];
+function resize(){const dpr=window.devicePixelRatio||1,w=cv.clientWidth;
+  if(cv.width!==Math.round(w*dpr)){cv.width=stain.width=Math.round(w*dpr);cv.height=stain.height=Math.round(w*dpr);S=cv.width;sg.clearRect(0,0,S,S);}}
+const mix=(a,b,x)=>a.map((v,i)=>Math.round(v+(b[i]-v)*x));
+function toPx([x,y]){const R=S*.46;return [S/2+x*R,S/2+y*R];}
+let lastPourEnd=0; function calcLast(){lastPourEnd=0;for(let i=0;i<data.flow.length;i++) if(data.flow[i]>=THR) lastPourEnd=i*DT;}
+function step(dt){
+  const {f,w}=sample(t), R=S*.46;
+  if(f>=THR){
+    const kT=TARGET/240, need=[0,30*kT,110*kT,1e9][Math.min(3,seg)];
+    if(!wasPouring && (seg===0 || (STYLE==='techno'&&isDK() ? (quiet>3 && w>=need) : quiet>1))){seg++;setDrone();if(STYLE==='techno'){TICK=60/sect().bpm/4;}nextTickD=Math.round(t*1000)/1000;tick=(STYLE==='acoustic'&&scale.meter==='bambuco'&&!(scale.deg2&&seg<2))?1:-1;}
+    wasPouring=true;quiet=0;
+    const [px,py]=toPx(pourPoint(t));
+    sg.fillStyle='rgba(35,18,8,0.035)';sg.beginPath();sg.arc(px,py,S*(.012+.018*f/MAXF),0,Math.PI*2);sg.fill();
+  } else {wasPouring=false;quiet+=dt;}
+  if(t<35 && w>5 && Math.random()<dt*14){const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*R*.8;
+    bubbles.push({x:S/2+Math.cos(a)*r,y:S/2+Math.sin(a)*r,r:S*(.004+Math.random()*.01),life:1});}
+  if(STYLE!=='techno' && t>lastPourEnd+5 && t<data.dur-2){
+    if(dripT===null){dripT=t;dripGap=1.2;dripIdx=Math.round(spanNow()/2)+degs().length;}
+    if(t>=dripT && dripIdx>=0){drops.push({life:1});
+      
+      explain(Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')+'　滴滤：没有注水，保持安静');
+      dripIdx--; dripT+=dripGap; dripGap*=1.25;}
+  }
+  rings.forEach(o=>{o.r+=(o.max-o.r)*Math.min(1,dt*2.2);o.life-=dt*.7;});
+  bubbles.forEach(o=>o.life-=dt*.5);drops.forEach(o=>o.life-=dt*.8);
+  rings=rings.filter(o=>o.life>0);bubbles=bubbles.filter(o=>o.life>0);drops=drops.filter(o=>o.life>0);
+}
+function render(){
+  if(!S)return; const {f,w}=sample(t),R=S*.46,x=Math.min(1,w/data.total);
+  g.clearRect(0,0,S,S);
+  const inner=mix([186,152,112],[92,52,28],Math.pow(x,.8)),outer=mix([140,108,76],[52,28,16],Math.pow(x,.8));
+  const gr=g.createRadialGradient(S/2,S/2,R*.05,S/2,S/2,R);gr.addColorStop(0,`rgb(${inner})`);gr.addColorStop(1,`rgb(${outer})`);
+  g.fillStyle=gr;g.beginPath();g.arc(S/2,S/2,R,0,Math.PI*2);g.fill();
+  g.save();g.beginPath();g.arc(S/2,S/2,R,0,Math.PI*2);g.clip();g.drawImage(stain,0,0);
+  bubbles.forEach(o=>{g.strokeStyle=`rgba(255,248,235,${.5*o.life})`;g.lineWidth=S*.002;g.beginPath();g.arc(o.x,o.y,o.r*(1.4-o.life*.4),0,Math.PI*2);g.stroke();});
+  rings.forEach(o=>{g.strokeStyle=`rgba(255,244,226,${.6*o.life})`;g.lineWidth=S*.003*(.5+o.life);g.beginPath();g.arc(o.x,o.y,o.r,0,Math.PI*2);g.stroke();});
+  drops.forEach(o=>{const r=S*.07*(1-o.life);g.strokeStyle=`rgba(255,244,226,${.45*o.life})`;g.lineWidth=S*.003;g.beginPath();g.arc(S/2,S/2,r,0,Math.PI*2);g.stroke();});
+  if(f>=THR){const [px,py]=toPx(pourPoint(t)),r=S*(.008+.012*f/MAXF);
+    const hg=g.createRadialGradient(px,py,0,px,py,r*4);hg.addColorStop(0,'rgba(255,250,240,.95)');hg.addColorStop(1,'rgba(255,250,240,0)');
+    g.fillStyle=hg;g.beginPath();g.arc(px,py,r*4,0,Math.PI*2);g.fill();}
+  dimV+=((f>=THR?0:(STYLE==='techno'?.82:.42))-dimV)*.18; if(dimV>.01){g.fillStyle='rgba(8,5,3,'+dimV.toFixed(3)+')';g.fillRect(0,0,S,S);}
+  if((STYLE==='edm'||STYLE==='techno')&&flashV>.02){g.fillStyle=(STYLE==='techno'?'rgba('+flashCol+',':'rgba(255,236,205,')+(flashV*(STYLE==='techno'?.22:.16)).toFixed(3)+')';g.fillRect(0,0,S,S);} flashV*=.82;
+  if(STYLE==='techno'&&isDK()&&DK.title&&(DK.titleKeep||t-DK.titleT<3.5)){const a=DK.titleKeep?Math.min(1,(t-DK.titleT)/.6):Math.max(0,Math.min(1,(t-DK.titleT)/.4,(3.5-(t-DK.titleT))/1));g.save();g.globalAlpha=a;g.fillStyle='rgb('+flashCol+')';g.font='600 '+Math.round(S*.12)+'px "Noto Serif SC","Songti SC",serif';g.textAlign='center';g.textBaseline='middle';g.fillText(DK.title,S/2,S/2);
+    if(DK.titleKeep&&X.summary){g.font=Math.round(S*.032)+'px -apple-system,"PingFang SC",sans-serif';g.fillStyle='rgba(255,245,230,.9)';const parts=X.summary.split(' · ');parts.forEach((l,i)=>g.fillText(l,S/2,S/2+S*(.12+i*.05)));}
+    g.restore();}
+  g.restore();g.strokeStyle='rgba(240,228,212,.10)';g.lineWidth=S*.003;g.beginPath();g.arc(S/2,S/2,R,0,Math.PI*2);g.stroke();
+  const RR=S*.484,pr=Math.min(1,Math.max(0,w)/TARGET);
+  g.lineCap='round';g.lineWidth=S*.007;g.strokeStyle='rgba(240,228,212,.07)';g.beginPath();g.arc(S/2,S/2,RR,0,Math.PI*2);g.stroke();
+  if(pr>0){g.strokeStyle='rgb(217,164,86)';g.beginPath();g.arc(S/2,S/2,RR,-Math.PI/2,-Math.PI/2+pr*Math.PI*2);g.stroke();}
+  g.lineCap='butt';
+}
+const noteEl=document.getElementById('note'),playBtn=document.getElementById('play');
+const rG=document.getElementById('rG'),rF=document.getElementById('rF'),rT=document.getElementById('rT'),segLbl=document.getElementById('segLbl'),segBar=document.getElementById('segBar'),stageEl=document.getElementById('stage'),cupEl=document.getElementById('cup');
+let glowV=0;
+function showCup(){ const parts=X.summary.split(' · '); const dl=document.getElementById('cupList'); dl.innerHTML='';
+  parts.forEach(p=>{ let k='',v=p; const m=p.match(/^(总水量|用时|注水平均|动机)\s*(.*)$/); if(m){k=m[1];v=m[2];}
+    else if(/BPM$/.test(p)){k='速度';} else if(/调$/.test(p)){k='调';} else if(/–/.test(p)){k='和弦';}
+    const dt=document.createElement('dt'),dd=document.createElement('dd'); dt.textContent=k||'·'; dd.textContent=v; dl.append(dt,dd); });
+  cupEl.hidden=false; }
+function hud(){const {f,w}=sample(t);
+  if(lastNote!==null&&t-lastNoteT<1.5){const m=midiOf(lastNote);const n=degs().length;noteEl.textContent=scale.cn?scale.cn[lastNote%n]:(Number.isInteger(m)?NAMES[m%12]+(Math.floor(m/12)-1):'第'+(lastNote%n+1)+'音');} else noteEl.textContent='—';
+  const s=Math.floor(t);rT.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  rF.innerHTML=Math.max(0,f).toFixed(1)+'<small>g/s</small>'; rG.innerHTML=Math.round(Math.max(0,w))+'<small>g</small>';
+  segLbl.textContent=X.ended||X.summary?'终':(seg>0?sect().name.split(' · ')[1]:'准备');
+  segBar.style.width=Math.min(100,100*Math.max(0,w)/TARGET).toFixed(1)+'%';
+  glowV+=((f>=THR?Math.min(1,.25+.75*f/MAXF):0)-glowV)*.15; stageEl.style.setProperty('--glow',glowV.toFixed(3));
+  if(X.summary&&cupEl.hidden) showCup();}
+function frame(ts,id){ if(!playing||id!==loopId)return;
+  let dt=Math.min(.1,(ts-last)/1000)*speed;last=ts;
+  if(liveRunning){dt=Math.max(0,(performance.now()-live.t0)/1000-t);}
+  const sub=Math.ceil(dt/.05);for(let i=0;i<sub;i++){t+=dt/sub;if(t>=data.dur){t=data.dur;break;}step(dt/sub);}
+  while(nextTickD<=t){onTick(ctx.currentTime+.02,nextTickD);nextTickD=Math.round((nextTickD+TICK)*1000)/1000;}
+  render();hud();
+  if(t>=data.dur){setPlaying(false);return;} requestAnimationFrame(ts2=>frame(ts2,id));}
+async function wake(){
+  if(!ctx){initAudio();setDrone();}
+  if(ctx.state!=='running'){ try{await ctx.resume();}catch(e){} }
+  try{const b=ctx.createBuffer(1,1,ctx.sampleRate),src=ctx.createBufferSource();src.buffer=b;src.connect(ctx.destination);src.start(0);}catch(e){}
+}
+let loopId=0, wakeLk=null;
+async function keepAwake(on){ try{ if(on&&!wakeLk&&navigator.wakeLock){ wakeLk=await navigator.wakeLock.request('screen'); wakeLk.addEventListener('release',()=>{wakeLk=null;}); } else if(!on&&wakeLk){ await wakeLk.release(); wakeLk=null; } }catch(e){ wakeLk=null; } }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&playing) keepAwake(true); });
+function setPlaying(p){playing=p;document.body.classList.toggle('running',p);keepAwake(p);playBtn.textContent=p?'暂停':(t>=data.dur?'重来':'播放');
+  if(ctx&&!p){droneTo(false); if(DK.yn) ynSet(0,0,ctx.currentTime); if(T){T.rsG.gain.setTargetAtTime(0,ctx.currentTime,.05);} if(L) L.crG.gain.setTargetAtTime(0,ctx.currentTime,.1);} if(ctx&&p&&inPhrase&&STYLE==='acoustic') droneTo(true);
+  if(p){last=performance.now();nextTickD=Math.ceil(t/TICK-1e-9)*TICK;const id=++loopId;requestAnimationFrame(ts=>frame(ts,id));} else if(ctx){const c=ctx;setTimeout(()=>{if(!playing&&c.state==='running')c.suspend();},700);}}
+function restart(){stopT=0;resetX();cupEl.hidden=true;if(DK.yn&&ctx){DK.yn.disG.gain.setValueAtTime(0,ctx.currentTime);DK.yn.dr.detune.setValueAtTime(0,ctx.currentTime);DK.yn.dr2.detune.setValueAtTime(0,ctx.currentTime);}if(typeof MASTER!=='undefined'&&MASTER&&ctx)MASTER.gain.setValueAtTime(.9,ctx.currentTime);if(STYLE==='techno')TICK=60/GENRES[GENRE].sect[1].bpm/4;nextTickD=0;dripT=null;explain('每个音的由来会显示在这里');pos=4;lastInt=0;inPhrase=false;cadence=[];noteCount=0;emaN=0;t=0;rings=[];bubbles=[];drops=[];seg=0;tick=0;ema=0;cur=0;wasPouring=false;quiet=99;lastNote=null;sg.clearRect(0,0,S,S);calcLast();setDrone();render();hud();}
+playBtn.addEventListener('click',async()=>{if(!playing) await wake();
+  if(!playing&&t>=data.dur)restart(); setPlaying(!playing);});
+function group(id,attr,fn){const el=document.getElementById(id);el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b.dataset[attr]);});}
+document.getElementById('again').addEventListener('click',async()=>{
+  await wake();
+  restart(); if(!playing) setPlaying(true); else {last=performance.now();nextTick=ctx.currentTime+.05;}
+});
+document.getElementById('crackle').addEventListener('change',e=>{crackleOn=e.target.checked;});
+group('styles','y',y=>{if(T&&ctx){T.rsG.gain.setTargetAtTime(0,ctx.currentTime,.05);T.uwG.gain.setTargetAtTime(1,ctx.currentTime,.05);T.uwF.frequency.setTargetAtTime(20000,ctx.currentTime,.05);}if(L&&ctx&&STYLE==='lofi'){tapeStop();L.crG.gain.setTargetAtTime(0,ctx.currentTime,.1);}STYLE=y;TICK=y==='techno'?.115:y==='edm'?.125:y==='lofi'?.1875:.3;nextTickD=Math.ceil(t/TICK-1e-9)*TICK;inPhrase=false;
+  if(ctx){droneTo(false); if(E){E.padG.gain.setTargetAtTime(0,ctx.currentTime,.05);}}});
+group('presets','p',p=>{if(liveRunning)return;data=PRESETS[p];setPlaying(false);restart();playBtn.textContent='播放';});
+const scEl=document.getElementById('scales'),infoEl=document.getElementById('info');
+Object.entries(SCALES).forEach(([k,v],i)=>{const b=document.createElement('button');b.dataset.c=k;b.setAttribute('aria-pressed',v===scale);
+  b.innerHTML=v.name+'<small>'+v.origin+'</small>';scEl.appendChild(b);});
+function showInfo(){infoEl.innerHTML='<b>'+scale.name+'</b>，'+scale.origin+'<br>音：'+scale.notes+'；节拍：'+scale.meterName+'<br>'+scale.basis+'：'+scale.why;}
+group('scales','c',c=>{scale=SCALES[c];if(GENRE!=='walker')tick=0;setDrone();showInfo();hud();});
+function paintGenres(){ document.querySelectorAll('#genres button').forEach(b=>{ const k=b.dataset.g; const on=(k==='walker'||k==='techno'); b.classList.toggle('tuned',on); b.title=on?'已调好':'可用，未细调'; }); }
+paintGenres();
+function syncSums(){ const pg=document.querySelector('#genres [aria-pressed="true"]'); const gn=pg?pg.textContent:'';
+  document.getElementById('sGenre').textContent=gn; document.getElementById('verGenre').textContent=gn;
+  document.getElementById('sScale').textContent=scale.name.split(' · ')[0]+(scale===SCALES.yunnan?'（云南）':'');
+  const pp=document.querySelector('#presets [aria-pressed="true"]'); document.getElementById('sPreset').textContent=pp?pp.childNodes[0].textContent:'';
+  document.getElementById('sVol').textContent=[1,2,3].map(k=>document.getElementById('v'+k).value).join(' / ');
+  document.getElementById('sTarget').textContent=TARGET+' g'; }
+document.addEventListener('click',()=>setTimeout(syncSums,0)); document.addEventListener('input',()=>setTimeout(syncSums,0));
+function paintScales(){ document.querySelectorAll('#scales button').forEach(b=>{ const k=b.dataset.c;
+    b.classList.toggle('tuned',k==='yunnan'); b.disabled=(GENRE==='walker'&&k==='java');
+    b.title=k==='yunnan'?'已为旋律电子调好':(GENRE==='walker'&&k==='java'?'Slendro 不在十二平均律上，旋律电子下停用':''); });
+  if(GENRE==='walker'&&scale===SCALES.java){ scale=SCALES.yunnan; document.querySelectorAll('#scales button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c==='yunnan')); showInfo(); } }
+paintScales();
+showInfo();
+group('speeds','s',s=>speed=+s);
+const fminEl=document.getElementById('fmin'),fmaxEl=document.getElementById('fmax');
+function syncRange(src){let a=+fminEl.value,b=+fmaxEl.value;
+  if(b-a<.5){ if(src===fminEl){b=Math.min(10,a+.5);fmaxEl.value=b;} else {a=Math.max(0,b-.5);fminEl.value=a;} }
+  FMIN=a;FMAX=b;document.getElementById('fminv').textContent=a.toFixed(1)+' g/s';document.getElementById('fmaxv').textContent=b.toFixed(1)+' g/s';}
+fminEl.addEventListener('input',()=>syncRange(fminEl));fmaxEl.addEventListener('input',()=>syncRange(fmaxEl));
+
+/* ---------- Bookoo Themis Mini (open BLE protocol) ----------
+   service 0x0FFE · weight notify 0xFF11 · command write 0xFF12
+   weight packet (20 B): 03 0B ms[3] unit sign g*100[3] sign flow*100[2] batt standby[2] buzzer smoothing reserved xor
+   command (6 B): 03 0A cmd d1 d2 xor   (07 = tare + start timer, 05 = stop timer, 08 d1 = flow smoothing on/off) */
+const BLE={dev:null,cmd:null,pk:0,bad:0,last:null,rateT:0,rateN:0,rate:0};
+let live=null, liveRunning=false;
+const stEl=document.getElementById('bleStatus'), rawEl=document.getElementById('raw'), rawBox=document.getElementById('rawBox');
+const btnConn=document.getElementById('bleConnect'), btnStart=document.getElementById('brewStart'), btnEnd=document.getElementById('brewEnd'), btnCsv=document.getElementById('exportCsv'), smoothChk=document.getElementById('smoothChk');
+const xorN=(a,n)=>{let c=0;for(let i=0;i<n;i++)c^=a[i];return c;};
+function status(t){stEl.textContent=t;}
+async function sendCmd(c,d1=0,d2=0){
+  if(!BLE.cmd) return false; const b=new Uint8Array([0x03,0x0A,c,d1,d2,0]); b[5]=xorN(b,5);
+  try{ if(BLE.cmd.writeValueWithoutResponse) await BLE.cmd.writeValueWithoutResponse(b); else await BLE.cmd.writeValue(b); return true;}
+  catch(e){ try{await BLE.cmd.writeValue(b);return true;}catch(e2){status('发送命令失败：'+e2.message);return false;} }
+}
+function parsePacket(b){
+  if(b.length<20||b[0]!==0x03||b[1]!==0x0B) return null;
+  const ok=xorN(b,19)===b[19]; if(!ok) BLE.bad++;
+  const neg=x=>x===0x2D||x===0x01;            // sign bytes are ASCII '+' / '-'
+  let g=((b[7]<<16)|(b[8]<<8)|b[9])/100; if(neg(b[6])) g=-g;
+  let fl=((b[11]<<8)|b[12])/100; if(neg(b[10])) fl=-fl;
+  return {ms:(b[2]<<16)|(b[3]<<8)|b[4],g,fl,batt:b[13],smooth:b[17],ok,hex:Array.from(b,x=>x.toString(16).padStart(2,'0')).join(' ')};
+}
+function onPacket(b){
+  const p=parsePacket(b); if(!p) return; BLE.pk++; BLE.last=p;
+  const now=performance.now(); BLE.rateN++; if(now-BLE.rateT>1000){BLE.rate=BLE.rateN*1000/(now-BLE.rateT);BLE.rateT=now;BLE.rateN=0;}
+  if(rawBox.open) rawEl.textContent=p.hex+'\n计时 '+(p.ms/1000).toFixed(1)+' s，重量 '+p.g.toFixed(2)+' g，流速 '+p.fl.toFixed(2)+' g/s\n电量 '+p.batt+'%，秤端平滑 '+(p.smooth?'开':'关')+'，约 '+BLE.rate.toFixed(1)+' 包/秒，校验不符 '+BLE.bad+' 包';
+  if(!liveRunning&&ARM.on){
+    if(now-ARM.t0>1000){ if(p.g>=2&&p.fl>=.4){ ARM.hits++; if(ARM.hits>=2){ ARM.on=false; startBrew({noTare:true}); return; } } else ARM.hits=0; }
+    status('等待注水… 读数 '+p.g.toFixed(1)+' g（检测到持续注水就自动开始）'); return; }
+  if(!liveRunning){ status('已连接 '+(BLE.dev&&BLE.dev.name||'Bookoo')+'，'+p.g.toFixed(1)+' g，电量 '+p.batt+'%'); return; }
+  const tn=(now-live.t0)/1000, i=Math.max(0,Math.round(tn/DT)), w=Math.max(0,p.g);
+  live.ef+=(Math.max(0,p.fl)-live.ef)*.5;        // light smoothing on our side (~11 packets/s)
+  if(i>live.filled){ const span=i-live.filled;
+    for(let k=1;k<=span;k++){const a=k/span; live.flow[live.filled+k]=live.lastF+(live.ef-live.lastF)*a; live.weight[live.filled+k]=live.lastW+(w-live.lastW)*a;}
+    live.filled=i; }
+  live.lastF=live.ef; live.lastW=w; data.total=Math.max(250,w);
+}
+let showAll=false;
+async function connectScale(){
+  if(!navigator.bluetooth){ status(/iPhone|iPad|iPod/.test(navigator.userAgent)?'iPhone 上的 Safari 和 Chrome 不支持网页蓝牙。请在 App Store 下载 Bluefy 浏览器，用它打开本页面。':'这个浏览器不支持网页蓝牙。请用安卓或电脑上的 Chrome 打开本页面。'); return; }
+  try{
+    if(navigator.bluetooth.getAvailability){ const ok=await navigator.bluetooth.getAvailability(); if(!ok){status('电脑的蓝牙没有打开，或 Chrome 没有蓝牙权限。请打开蓝牙后刷新页面。');return;} }
+    status(showAll?'正在列出附近所有蓝牙设备…':'正在搜索秤…');
+    const opt=showAll?{acceptAllDevices:true,optionalServices:[0x0FFE]}
+      :{filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'},{namePrefix:'BK'},{services:[0x0FFE]}],optionalServices:[0x0FFE]};
+    const dev=await navigator.bluetooth.requestDevice(opt);
+    BLE.dev=dev; dev.addEventListener('gattserverdisconnected',()=>{BLE.cmd=null;status('秤已断开。');document.body.classList.remove('linked');btnConn.textContent='连接秤';btnStart.disabled=true;if(liveRunning) endBrew();});
+    status('正在连接 '+(dev.name||'')+'…');
+    let server; for(let a=0;a<3;a++){ try{server=await dev.gatt.connect();break;}catch(e){ if(a===2) throw e; status('连接没成功，第 '+(a+2)+' 次重试…'); await new Promise(r=>setTimeout(r,800)); } }
+    let svc; try{svc=await server.getPrimaryService(0x0FFE);}catch(e){status('连上了“'+(dev.name||'未命名设备')+'”，但它不是 Bookoo 秤（找不到秤的数据服务）。请重新连接并选对设备。');try{dev.gatt.disconnect();}catch(_){}return;}
+    const wt=await svc.getCharacteristic(0xFF11); BLE.cmd=await svc.getCharacteristic(0xFF12);
+    wt.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;onPacket(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
+    await wt.startNotifications();
+    await sendCmd(0x08,smoothChk.checked?1:0);
+    btnStart.disabled=false; document.getElementById('bleTare').disabled=false; document.body.classList.add('linked'); btnConn.textContent='重新连接'; status('已连接 '+(dev.name||'Bookoo')+'，等待数据…');
+  }catch(e){
+    if(e.name==='NotFoundError'){ status(showAll?'没有选择设备。':'列表里没有找到秤（或没有选择）。可以点“显示所有蓝牙设备”再试。'); document.getElementById('bleAll').hidden=false; }
+    else if(e.name==='SecurityError') status('浏览器拒绝了蓝牙权限：'+e.message+'。请用 Chrome 打开下载的本地文件，不要在 Claude 里预览。');
+    else if(e.name==='NetworkError') status('秤连接中断：'+e.message+'。请确认手机上的 Bookoo App 已断开或关闭，秤重新开机后再试。');
+    else status('连接失败（'+e.name+'）：'+e.message);
+  }
+}
+const ARM={on:false,t0:0,hits:0}; let START_MODE='auto';
+async function armBrew(){ await wake(); await sendCmd(0x01); ARM.on=true; ARM.t0=performance.now(); ARM.hits=0; btnStart.textContent='重新准备'; status('已清零，等待注水…'); }
+async function startBrew(opts){
+  await wake(); if(opts&&opts.noTare) await sendCmd(0x04); else await sendCmd(0x07); ARM.on=false;
+  live={t0:performance.now(),flow:[0],weight:[0],filled:0,lastF:0,lastW:0,ef:0};
+  data={flow:live.flow,weight:live.weight,dur:1e9,total:250};
+  setPlaying(false); restart(); lastPourEnd=Infinity; liveRunning=true; speed=1;
+  btnStart.disabled=true; btnEnd.disabled=false; playBtn.disabled=true; document.getElementById('again').disabled=true;
+  status(opts&&opts.noTare?'检测到注水，已自动开始。':'冲煮中。已去皮并开始计时，开始注水吧。'); setPlaying(true);
+}
+function endBrew(force){
+  if(!liveRunning) return;
+  if(!force&&STYLE==='techno'&&!X.ended){playEnding(t,live.lastW);setTimeout(()=>endBrew(true),isDK()?6500:6500);btnEnd.disabled=true;return;} liveRunning=false; sendCmd(0x05);
+  const n=live.filled+1, rec={flow:Float64Array.from(live.flow.slice(0,n)),weight:Float64Array.from(live.weight.slice(0,n)),dur:Math.max(1,(n-1)*DT),total:Math.max(1,live.lastW)};
+  PRESETS.mine=rec; data=rec; setPlaying(false); t=rec.dur; calcLast(); render(); hud();
+  let b=document.querySelector('#presets button[data-p="mine"]');
+  if(!b){b=document.createElement('button');b.dataset.p='mine';b.textContent='我的上一杯';document.getElementById('presets').appendChild(b);}
+  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  btnStart.disabled=!BLE.cmd; btnStart.textContent=START_MODE==='auto'?'准备（注水自动开始）':'开始冲煮'; btnEnd.disabled=true; playBtn.disabled=false; document.getElementById('again').disabled=false; btnCsv.hidden=false;
+  playBtn.textContent='重来';
+  status((X.summary?X.summary+'。':'')+'这一杯结束：'+Math.round(rec.total)+' g，用时 '+Math.floor(rec.dur/60)+':'+String(Math.floor(rec.dur%60)).padStart(2,'0')+'。可以按"重来"回放，或导出数据。');
+}
+function exportCsv(){
+  const r=PRESETS.mine; if(!r) return; let out='time_s,weight_g,flow_gps\n';
+  for(let i=0;i<r.flow.length;i++) out+=(i*DT).toFixed(1)+','+r.weight[i].toFixed(2)+','+r.flow[i].toFixed(2)+'\n';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));
+  a.download='pour-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+btnConn.addEventListener('click',()=>{showAll=false;connectScale();});document.getElementById('bleAll').addEventListener('click',()=>{showAll=true;connectScale();}); btnStart.addEventListener('click',()=>{ if(START_MODE==='auto') armBrew(); else startBrew(); });
+document.getElementById('bleTare').addEventListener('click',async()=>{ await sendCmd(0x01); if(ARM.on){ARM.t0=performance.now();ARM.hits=0;} status('已清零'+(ARM.on?'，继续等待注水…':'。')); });
+group('startMode','m',m=>{ START_MODE=m; ARM.on=false; btnStart.textContent=m==='auto'?'准备（注水自动开始）':'开始冲煮'; }); btnEnd.addEventListener('click',endBrew); btnCsv.addEventListener('click',exportCsv);
+smoothChk.addEventListener('change',()=>sendCmd(0x08,smoothChk.checked?1:0));
+
+const gEl=document.getElementById('genres'),gInfo=document.getElementById('genreInfo');
+function showGenre(){gInfo.textContent=GENRES[GENRE].label+'。三段：'+[1,2,3].map(k=>GENRES[GENRE].sect[k].name.split(' · ')[1]+' '+GENRES[GENRE].sect[k].bpm).join(' → ')+' BPM';}
+gEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;gEl.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));GENRE=b.dataset.g;
+  if(ctx&&seg>0){TICK=60/sect().bpm/4;} showGenre(); paintScales();});
+showGenre();
+[1,2,3].forEach(k=>{const el=document.getElementById('v'+k);el.addEventListener('input',()=>{SECVOL[k]=+el.value/100;document.getElementById('v'+k+'v').textContent=el.value+'%';
+  if(ctx&&MASTER&&Math.max(1,Math.min(3,seg))===k&&!(DK.peaked||DK.outro)) MASTER.gain.setTargetAtTime(SECVOL[k],ctx.currentTime,.05);});});
+document.getElementById('phoneMode').addEventListener('change',e=>{PHONE=e.target.checked;if(PHONEG&&ctx)PHONEG.gain.setTargetAtTime(PHONE?.55:0,ctx.currentTime,.05);});
+document.getElementById('target').addEventListener('input',e=>{TARGET=+e.target.value;document.getElementById('targetv').textContent=TARGET+' g';
+  if(!liveRunning){const cur=Object.keys(PRESETS).find(k=>PRESETS[k]===data); buildPresets(TARGET/240); if(cur&&cur!=='mine'){data=PRESETS[cur]; calcLast(); if(!playing){render();hud();}}}});
+window.addEventListener('resize',()=>{resize();render();});
+calcLast();resize();render();syncSums();
+</script>
+</body>
+</html>
