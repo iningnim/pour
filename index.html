@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.12</title>
+<title>一杯咖啡的样子 v4.13</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -95,7 +95,13 @@ body.running .stamp{opacity:0}
 .mrow b{font-size:.85rem;color:var(--muted);letter-spacing:.1em}
 .mrow output{font-family:var(--mono);font-size:1.1rem;color:var(--crema);min-width:5.5em;font-variant-numeric:tabular-nums}
 .mrow .chk{margin-left:auto}
-#mFlow{height:44px;accent-color:var(--crema);touch-action:none}
+.mtrack{position:relative;height:64px;border-radius:14px;background:var(--raise);border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;overflow:hidden}
+.mtrack.on{border-color:var(--crema)}
+.mfill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(217,164,86,.25),rgba(217,164,86,.75))}
+.mknob{position:absolute;top:8px;bottom:8px;width:6px;margin-left:-3px;left:0;border-radius:3px;background:var(--crema);opacity:0}
+.mtrack.on .mknob{opacity:1}
+.mhint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--muted);pointer-events:none}
+.mtrack.on .mhint{opacity:0}
 .mscale{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--mono)}
 body.manual main{padding-bottom:170px}
 .fold{font-size:.72rem;color:var(--muted);text-align:center;letter-spacing:.1em;padding-top:4px}
@@ -158,7 +164,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.12</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.13</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -212,10 +218,11 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   </div>
 
   <div class="mpad" id="manualPad" hidden>
-    <div class="mrow"><b>手动注水</b><output id="mVal">0.0 g/s</output>
-      <label class="chk"><input type="checkbox" id="mRelease" checked> 松手归零</label>
+    <div class="mrow"><b>手动注水</b><output id="mVal">停</output>
       <button class="ghost" id="mEnd">结束</button></div>
-    <input type="range" id="mFlow" min="0" max="8" step="0.1" value="0" aria-label="模拟流速">
+    <div class="mtrack" id="mTrack" role="slider" aria-label="模拟流速：按住是注水，抬手是停" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0" tabindex="0">
+      <div class="mfill" id="mFill"></div><div class="mknob" id="mKnob"></div><span class="mhint" id="mHint">按住拖动 = 注水　抬手 = 停</span>
+    </div>
     <div class="mscale"><span>0 停</span><span>2 慢</span><span>4</span><span>6 快</span><span>8 g/s</span></div>
   </div>
 
@@ -298,7 +305,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.12</summary>
+    <summary>版本说明 · v4.13</summary>
+    <h2>v4.13</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>抬手就是停</b>：手动注水改成一条触控条——按住就是注水，左右位置决定流速（0.4–8 g/s），手指一离开立刻归零（停手）。手机触屏和电脑鼠标都一样；切走页面也会自动停。</li>
+      <li>音乐与 v4.11 相同。</li>
+    </ul>
     <h2>v4.12</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1969,16 +1982,21 @@ function endBrew(force){
   playBtn.textContent='重来';
   status((X.summary?X.summary+'。':'')+'这一杯结束：'+Math.round(rec.total)+' g，用时 '+Math.floor(rec.dur/60)+':'+String(Math.floor(rec.dur%60)).padStart(2,'0')+'。可以按"重来"回放，或导出数据。');
 }
-const MAN={iv:null,w:0,last:0}; const mPad=document.getElementById('manualPad'), mFlow=document.getElementById('mFlow'), mVal=document.getElementById('mVal');
-function mShow(){ mVal.textContent=(+mFlow.value).toFixed(1)+' g/s'; }
+const MAN={iv:null,w:0,last:0,f:0,id:null}; const mPad=document.getElementById('manualPad'), mTrack=document.getElementById('mTrack'), mVal=document.getElementById('mVal');
+const mFlow={get value(){return MAN.f;}, set value(v){MAN.f=+v;}};
+function mShow(){ const f=MAN.f, pct=f/8*100; mVal.textContent=f>0?f.toFixed(1)+' g/s':'停'; document.getElementById('mFill').style.width=(f>0?pct:0)+'%'; document.getElementById('mKnob').style.left=pct+'%'; mTrack.classList.toggle('on',f>0); mTrack.setAttribute('aria-valuenow',f.toFixed(1)); }
+function mAt(e){ const r=mTrack.getBoundingClientRect(); return Math.max(.4,Math.min(8,Math.round((e.clientX-r.left)/r.width*80)/10)); }
+mTrack.addEventListener('pointerdown',e=>{ e.preventDefault(); MAN.id=e.pointerId; try{mTrack.setPointerCapture(e.pointerId);}catch(_){} MAN.f=mAt(e); mShow(); });
+mTrack.addEventListener('pointermove',e=>{ if(MAN.id!==e.pointerId) return; MAN.f=mAt(e); mShow(); });
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>mTrack.addEventListener(ev,e=>{ if(MAN.id!==e.pointerId) return; MAN.id=null; MAN.f=0; mShow(); }));
+mTrack.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('blur',()=>{ MAN.id=null; MAN.f=0; mShow(); });
 async function manStart(){ if(liveRunning) return; await startBrew({manual:true}); MAN.w=0; MAN.last=performance.now(); mFlow.value=0; mShow();
   mPad.hidden=false; document.body.classList.add('manual'); document.getElementById('mEnd').disabled=false; window.scrollTo({top:0});
   MAN.iv=setInterval(()=>{ if(!liveRunning){manStop();return;} const now=performance.now(), dt=Math.min(.3,(now-MAN.last)/1000); MAN.last=now; const f=+mFlow.value; MAN.w+=f*dt; liveFeed(MAN.w,f,now); },90); }
 function manStop(){ if(MAN.iv){clearInterval(MAN.iv);MAN.iv=null;} mPad.hidden=true; document.body.classList.remove('manual'); }
 document.getElementById('manualBtn').addEventListener('click',manStart);
 document.getElementById('mEnd').addEventListener('click',()=>endBrew());
-mFlow.addEventListener('input',mShow);
-['pointerup','pointercancel','touchend','mouseup'].forEach(ev=>mFlow.addEventListener(ev,()=>{ if(document.getElementById('mRelease').checked){ mFlow.value=0; mShow(); } }));
 function exportCsv(){
   const r=PRESETS.mine; if(!r) return; let out='time_s,weight_g,flow_gps\n';
   for(let i=0;i<r.flow.length;i++) out+=(i*DT).toFixed(1)+','+r.weight[i].toFixed(2)+','+r.flow[i].toFixed(2)+'\n';
