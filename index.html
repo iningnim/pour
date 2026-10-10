@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.3</title>
+<title>一杯咖啡的样子 v4.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -145,7 +145,7 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.3</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.4</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -272,7 +272,15 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.3</summary>
+    <summary>版本说明 · v4.4</summary>
+    <h2>v4.4</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>蓝牙编号写全</b>：秤的服务与数据通道改用完整 128 位编号（00000ffe-…），Bluefy 等浏览器都认。</li>
+      <li><b>自动退一步</b>：按名字找秤失败时，自动列出附近所有蓝牙设备，选 BOOKOO 即可。</li>
+      <li><b>出错标明步骤</b>：状态栏写明是【打开蓝牙列表】【连接秤】【找数据服务】【找数据通道】【开始接收数据】中哪一步失败。</li>
+      <li>音乐、界面与 v4.2 相同。</li>
+    </ul>
     <h2>v4.3</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1743,27 +1751,42 @@ function onPacket(b){
   live.lastF=live.ef; live.lastW=w; data.total=Math.max(250,w);
 }
 let showAll=false;
+const UUID=n=>'0000'+n.toString(16).padStart(4,'0')+'-0000-1000-8000-00805f9b34fb';
+const SVC=UUID(0x0FFE), CH_W=UUID(0xFF11), CH_C=UUID(0xFF12);
+const errTxt=e=>(e&&e.name?e.name+'：':'')+(e&&e.message!==undefined?e.message:String(e));
 async function connectScale(){
   if(!navigator.bluetooth){ status(/iPhone|iPad|iPod/.test(navigator.userAgent)?'iPhone 上的 Safari 和 Chrome 不支持网页蓝牙。请在 App Store 下载 Bluefy 浏览器，用它打开本页面。':'这个浏览器不支持网页蓝牙。请用安卓或电脑上的 Chrome 打开本页面。'); return; }
+  let stepName='打开蓝牙列表', dev;
   try{
     status(showAll?'正在打开蓝牙列表（所有设备）…':'正在打开蓝牙列表…');
-    const opt=showAll?{acceptAllDevices:true,optionalServices:[0x0FFE]}
-      :{filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'},{namePrefix:'BK'},{services:[0x0FFE]}],optionalServices:[0x0FFE]};
-    const dev=await navigator.bluetooth.requestDevice(opt);
+    const optAll={acceptAllDevices:true,optionalServices:[SVC]};
+    const optName={filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'}],optionalServices:[SVC]};
+    if(showAll) dev=await navigator.bluetooth.requestDevice(optAll);
+    else{
+      try{ dev=await navigator.bluetooth.requestDevice(optName); }
+      catch(e1){
+        if(e1&&e1.name==='NotFoundError') throw e1;           // user cancelled / nothing chosen
+        status('按名字找秤失败（'+errTxt(e1)+'），改为列出所有蓝牙设备，请选 BOOKOO…');
+        dev=await navigator.bluetooth.requestDevice(optAll);
+      }
+    }
     BLE.dev=dev; dev.addEventListener('gattserverdisconnected',()=>{BLE.cmd=null;status('秤已断开。');document.body.classList.remove('linked');btnConn.textContent='连接秤';btnStart.disabled=true;if(liveRunning) endBrew();});
-    status('正在连接 '+(dev.name||'')+'…');
+    stepName='连接秤'; status('正在连接 '+(dev.name||'')+'…');
     let server; for(let a=0;a<3;a++){ try{server=await dev.gatt.connect();break;}catch(e){ if(a===2) throw e; status('连接没成功，第 '+(a+2)+' 次重试…'); await new Promise(r=>setTimeout(r,800)); } }
-    let svc; try{svc=await server.getPrimaryService(0x0FFE);}catch(e){status('连上了“'+(dev.name||'未命名设备')+'”，但它不是 Bookoo 秤（找不到秤的数据服务）。请重新连接并选对设备。');try{dev.gatt.disconnect();}catch(_){}return;}
-    const wt=await svc.getCharacteristic(0xFF11); BLE.cmd=await svc.getCharacteristic(0xFF12);
+    stepName='找数据服务';
+    let svc; try{svc=await server.getPrimaryService(SVC);}catch(e){status('连上了“'+(dev.name||'未命名设备')+'”，但找不到秤的数据服务（'+errTxt(e)+'）。请确认选的是 BOOKOO 秤。');try{dev.gatt.disconnect();}catch(_){}return;}
+    stepName='找数据通道';
+    const wt=await svc.getCharacteristic(CH_W); BLE.cmd=await svc.getCharacteristic(CH_C);
+    stepName='开始接收数据';
     wt.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;onPacket(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
     await wt.startNotifications();
     await sendCmd(0x08,smoothChk.checked?1:0);
     btnStart.disabled=false; document.getElementById('bleTare').disabled=false; document.body.classList.add('linked'); btnConn.textContent='重新连接'; status('已连接 '+(dev.name||'Bookoo')+'，等待数据…');
   }catch(e){
-    if(e.name==='NotFoundError'){ status(showAll?'没有选择设备。':'列表里没有找到秤（或没有选择）。可以点“显示所有蓝牙设备”再试。'); document.getElementById('bleAll').hidden=false; }
-    else if(e.name==='SecurityError') status('浏览器拒绝了蓝牙权限：'+e.message+'。请用 Chrome 打开下载的本地文件，不要在 Claude 里预览。');
-    else if(e.name==='NetworkError') status('秤连接中断：'+e.message+'。请确认手机上的 Bookoo App 已断开或关闭，秤重新开机后再试。');
-    else status('连接失败（'+(e&&e.name||'错误')+'）：'+(e&&e.message||e)+'。请确认手机蓝牙已打开、Bluefy 有蓝牙权限，秤已开机且没有被 Bookoo App 占用。');
+    if(e&&e.name==='NotFoundError'&&stepName==='打开蓝牙列表'){ status(showAll?'没有选择设备。':'没有选到秤。可以点“显示所有蓝牙设备”再试。'); document.getElementById('bleAll').hidden=false; }
+    else if(e&&e.name==='SecurityError') status('【'+stepName+'】浏览器拒绝了蓝牙权限：'+e.message);
+    else status('【'+stepName+'】失败：'+errTxt(e)+'。请确认手机蓝牙已打开、浏览器有蓝牙权限，秤已开机且没有被 Bookoo App 占用。');
+    document.getElementById('bleAll').hidden=false;
   }
 }
 const ARM={on:false,t0:0,hits:0}; let START_MODE='auto';
