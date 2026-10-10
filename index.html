@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.15</title>
+<title>一杯咖啡的样子 v4.16</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.15</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.16</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -280,7 +280,8 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
         <div class="range"><label for="v1">一段</label><input type="range" id="v1" min="0" max="100" step="1" value="22"><output id="v1v">22%</output></div>
         <div class="range"><label for="v2">二段</label><input type="range" id="v2" min="0" max="100" step="1" value="60"><output id="v2v">60%</output></div>
         <div class="range"><label for="v3">三段</label><input type="range" id="v3" min="0" max="100" step="1" value="85"><output id="v3v">85%</output></div>
-        <p class="info">冲煮中拖动会立即生效。攀升和顶点会在第三段的基础上再推高约三到四成。</p>
+        <div class="range"><label for="vVoice">流速</label><input type="range" id="vVoice" min="0" max="150" step="1" value="100"><output id="vVoicev">100%</output></div>
+        <p class="info">冲煮中拖动会立即生效。"流速"是注水时一直响的流速之声（音高 = 流速）。顶点会在第三段的基础上再推高约三到四成。</p>
         <label class="chk"><input type="checkbox" id="phoneMode" checked> 手机外放模式（给低频加泛音，手机喇叭也听得到底鼓和低音；接音箱或耳机可关掉）</label>
       </div>
     </details>
@@ -308,7 +309,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.15</summary>
+    <summary>版本说明 · v4.16</summary>
+    <h2>v4.16</h2>
+    <h3>本版重点（旋律电子）</h3>
+    <ul>
+      <li><b>等待会呼吸</b>：长和弦与一层气声跟着节拍一起一伏（2 小节吸气变亮、2 小节呼气变暗），等得越久呼吸越深；心跳改成"咚—哒"一组，吸气时"哒"更明显；每 2 小节在下一拍前有一声"倒吸"的反向声；和弦上方挂一个悬着的音（不是旋律），越等越清楚；停满 12 秒蓄力声照旧。再注水时这些全部收掉，音乐接上。</li>
+      <li><b>流速之声更响</b>：约为上一版 3 倍、更亮；它响的时候其他声部自动让出约两成。设置 → 音量里新增"流速"滑杆（0–150%，默认 100%）。</li>
+    </ul>
     <h2>v4.15</h2>
     <h3>本版重点（旋律电子）</h3>
     <ul>
@@ -1593,11 +1600,35 @@ function wWaitPad(on,when){
   if(on&&!W.waitPad){ const ch=wChord(Math.max(0,Math.floor(tick/16))); const fl=ctx.createBiquadFilter(),g=ctx.createGain();fl.type='lowpass';fl.frequency.value=480;
     g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.05,when+1.2); const os=[];
     ch.slice(1).forEach(m=>[-8,8].forEach(d=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtoh(m);o.detune.value=d;o.connect(fl);o.start(when);os.push(o);}));
-    fl.connect(g); g.connect(MASTER); W.waitPad={g,os}; }
-  if(!on&&W.waitPad){ const p=W.waitPad; W.waitPad=null; p.g.gain.cancelScheduledValues(when); p.g.gain.setTargetAtTime(0,when,.15); p.os.forEach(o=>o.stop(when+1)); }
+    fl.connect(g); g.connect(MASTER);
+    // air (the breath itself)
+    const n=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate), d=n.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const ns=ctx.createBufferSource(); ns.buffer=n; ns.loop=true; const af=ctx.createBiquadFilter(); af.type='bandpass'; af.Q.value=.9; af.frequency.value=700; const ag=ctx.createGain(); ag.gain.value=0;
+    ns.connect(af); af.connect(ag); ag.connect(MASTER); ns.start(when); os.push(ns);
+    // a suspended, unresolved tone above the chord (not a melody: one held note)
+    const so=ctx.createOscillator(), sg=ctx.createGain(), sf=ctx.createBiquadFilter(); so.type='triangle'; so.frequency.value=mtoh(ch[0]+17); sf.type='lowpass'; sf.frequency.value=2200; sg.gain.value=0;
+    so.connect(sf); sf.connect(sg); dkFx(); sg.connect(DK.fx.clear); so.start(when); os.push(so);
+    W.waitPad={g,fl,os,ag,af,sg}; }
+  if(!on&&W.waitPad){ const p=W.waitPad; W.waitPad=null; [p.g,p.ag,p.sg].forEach(x=>{x.gain.cancelScheduledValues(when); x.gain.setTargetAtTime(0,when,.12);}); p.os.forEach(o=>o.stop(when+1)); }
 }
+function wBreath(when,wait){ // 4-bar breath: 2 bars in, 2 bars out; deeper the longer you wait
+  const p=W.waitPad; if(!p) return; const ph=(((tick%64)+64)%64)/64, br=.5-.5*Math.cos(2*Math.PI*ph), dep=Math.min(1,.45+wait/16);
+  p.fl.frequency.setTargetAtTime(320+1500*br*dep,when,.25); p.g.gain.setTargetAtTime(.035+.06*br*dep,when,.25);
+  p.ag.gain.setTargetAtTime(.035*br*dep,when,.25); p.af.frequency.setTargetAtTime(500+1700*br,when,.25);
+  p.sg.gain.setTargetAtTime((.008+.03*Math.min(1,wait/14))*(.6+.4*br),when,.4);
+  return br;
+}
+function wRevSwell(when,dur,v){ // "drawing breath" into the next downbeat
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf; n.loop=true; const f=ctx.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.1;
+  f.frequency.setValueAtTime(700,when); f.frequency.exponentialRampToValueAtTime(5200,when+dur);
+  const g=ctx.createGain(); g.gain.setValueAtTime(.0001,when); g.gain.exponentialRampToValueAtTime(v,when+dur*.97); g.gain.linearRampToValueAtTime(0,when+dur);
+  n.connect(f); f.connect(g); dkFx(); g.connect(DK.fx.clear); n.start(when); n.stop(when+dur+.05); }
+function waitBeat2(when,v){ // lub-dub: the softer, higher second beat
+  const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(240,when);o.frequency.exponentialRampToValueAtTime(120,when+.07);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.32*v,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.2);o.connect(g);g.connect(COMP);o.start(when);o.stop(when+.22);
+  heartbeat(when,.16*v); }
 /* ---------- v4.11: the hand drives the sound in real time ---------- */
-const RX={x:0,f:0,gate:0,lastT:null,neutral:true};
+const RX={x:0,f:0,gate:0,lastT:null,neutral:true}; let VOICEVOL=1;
 function lv(a){ return Math.max(0,Math.min(1,(RX.f-a)/.25)); }
 function wLayer(){ const F=RX.f; return F<2.25?1:Math.min(17,2+Math.floor((F-2.25)/.25)); }
 function wKick(when,floor,v){ tKick(when,true,floor,v); noiseHit(when,'bandpass',2600,1.2,.09*v,.025,T.duck); }
@@ -1618,7 +1649,7 @@ function wReact(tD){ // called every animation frame (data time tD)
   const x=RX.x, gt=RX.gate;
   const cut=300+(16000-300)*Math.pow(gt*(.1+.9*x),1.8), vol=.25+.75*gt*(.35+.65*x)+.15*gt*lv(6.0);
   if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(.35+.45*x,c,.1);
-  T.rxF.frequency.setTargetAtTime(cut,c,.03); T.rxG.gain.setTargetAtTime(vol,c,.03); RX.neutral=false;
+  T.rxF.frequency.setTargetAtTime(cut,c,.03); T.rxG.gain.setTargetAtTime(vol*(1-.2*gt*VOICEVOL),c,.03); RX.neutral=false;
   wVoice(gt,c);
   wWater(); W.wt.g.gain.setTargetAtTime(.012*x*gt+.002*gt,c,.05); W.wt.f.frequency.setTargetAtTime(1800+3800*x,c,.08);
 }
@@ -1631,8 +1662,8 @@ function wVoice(gt,c){ // "flow voice": always sounding while pouring; pitch = f
   if(W.vo.step===null||Math.abs(raw-W.vo.step)>.6) W.vo.step=Math.round(raw);
   const hz=mtoh(wK(wDeg(W.vo.step-5))), x=RX.x;
   W.vo.os.forEach(o=>o.frequency.setTargetAtTime(hz,c,.03));
-  W.vo.f.frequency.setTargetAtTime(900+3200*x,c,.05);
-  W.vo.g.gain.setTargetAtTime(gt*(.03+.05*x),c,gt>.5?.03:.04);
+  W.vo.f.frequency.setTargetAtTime(1400+3600*x,c,.05);
+  W.vo.g.gain.setTargetAtTime(gt*(.09+.15*x)*VOICEVOL,c,gt>.5?.03:.04);
 }
 function wWater(){ if(W.wt) return; const n=ctx.createBuffer(2,ctx.sampleRate*2,ctx.sampleRate);
   for(let ch=0;ch<2;ch++){const d=n.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
@@ -1663,11 +1694,13 @@ function onTickWalker(when,tD){
       T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(220,c,.05);T.uwG.gain.setTargetAtTime(.15,c,.05);
       if(seg===1&&!W.brightSet){ W.bright=(W.s1flow.length?W.s1flow.reduce((a,b)=>a+b,0)/W.s1flow.length:4)>4.2; W.brightSet=true; }
       wWaitPad(true,c);
-      explain(ts+'　停手：间奏。只剩闷闷的长和弦和心跳'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
+      explain(ts+'　停手：间奏。和弦跟着呼吸一起一伏，心跳，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
     if(stopT<=0) return;
     const wait=Math.max(0,tD-stopT);
     if(seg>=3&&(W.peaked||w>=TARGET-10)&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
-    if(tick%8===0&&wait<40) waitBeat(when);
+    const br=wBreath(when,wait)||0, s16w=((tick%16)+16)%16;
+    if(wait<40){ if(s16w===0) waitBeat(when); if(s16w===2) waitBeat2(when,.7+.5*br); }
+    if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.05*Math.min(1,wait/12));
     const rise=wait<12?0:Math.min(1,(wait-12)/13);
     T.rsF.frequency.setTargetAtTime(Math.min(7000,300*Math.pow(2,rise*4.2)),when,.1); T.rsG.gain.setTargetAtTime(.07*rise,when,.1);
     if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　间奏 '+wait.toFixed(0)+' 秒（已注 '+Math.round(w)+' / '+TARGET+' g）');
@@ -1906,7 +1939,7 @@ function syncSums(){ const pg=document.querySelector('#genres [aria-pressed="tru
   document.getElementById('sGenre').textContent=gn; document.getElementById('verGenre').textContent=gn;
   document.getElementById('sScale').textContent=scale.name.split(' · ')[0]+(scale===SCALES.yunnan?'（云南）':'');
   const pp=document.querySelector('#presets [aria-pressed="true"]'); document.getElementById('sPreset').textContent=pp?pp.childNodes[0].textContent:'';
-  document.getElementById('sVol').textContent=[1,2,3].map(k=>document.getElementById('v'+k).value).join(' / ');
+  document.getElementById('sVol').textContent=[1,2,3].map(k=>document.getElementById('v'+k).value).join(' / ')+' · 流速 '+document.getElementById('vVoice').value;
   document.getElementById('sTarget').textContent=TARGET+' g'; }
 document.addEventListener('click',()=>setTimeout(syncSums,0)); document.addEventListener('input',()=>setTimeout(syncSums,0));
 function paintScales(){ document.querySelectorAll('#scales button').forEach(b=>{ const k=b.dataset.c;
@@ -2096,6 +2129,7 @@ gEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return
 showGenre();
 [1,2,3].forEach(k=>{const el=document.getElementById('v'+k);el.addEventListener('input',()=>{SECVOL[k]=+el.value/100;document.getElementById('v'+k+'v').textContent=el.value+'%';
   if(ctx&&MASTER&&Math.max(1,Math.min(3,seg))===k&&!(DK.peaked||DK.outro)) MASTER.gain.setTargetAtTime(SECVOL[k],ctx.currentTime,.05);});});
+document.getElementById('vVoice').addEventListener('input',e=>{VOICEVOL=+e.target.value/100;document.getElementById('vVoicev').textContent=e.target.value+'%';});
 document.getElementById('phoneMode').addEventListener('change',e=>{PHONE=e.target.checked;if(PHONEG&&ctx)PHONEG.gain.setTargetAtTime(PHONE?.55:0,ctx.currentTime,.05);});
 document.getElementById('target').addEventListener('input',e=>{TARGET=+e.target.value;document.getElementById('targetv').textContent=TARGET+' g';
   if(!liveRunning){const cur=Object.keys(PRESETS).find(k=>PRESETS[k]===data); buildPresets(TARGET/240); if(cur&&cur!=='mine'){data=PRESETS[cur]; calcLast(); if(!playing){render();hud();}}}});
