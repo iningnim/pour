@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.18</title>
+<title>一杯咖啡的样子 v4.19</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.18</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.19</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -309,7 +309,12 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.18</summary>
+    <summary>版本说明 · v4.19</summary>
+    <h2>v4.19</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>结尾干净利落</b>：第三段停手 0.6 秒后，音乐连同混响、回声、流速之声、水声一起立刻收掉（约 0.1 秒），静 0.25 秒，敲一声锣；锣只靠自己的余音约 5 秒淡出，不再带长混响。</li>
+    </ul>
     <h2>v4.18</h2>
     <h3>本版重点（旋律电子 · 等待）</h3>
     <ul>
@@ -1308,10 +1313,15 @@ function darkOutroStart(tD,w){
   dkFx(); DK.fx.clearRev.gain.setValueAtTime(.06,c);
   [T.rsG.gain,T.uwG.gain,T.uwF.frequency,MASTER.gain].forEach(p=>p.cancelScheduledValues(c));
   T.rsG.gain.setValueAtTime(0,c); T.uwG.gain.setValueAtTime(0,c);           // everything stops
+  // cut the tails too: long reverb + echoes of the melody would otherwise keep ringing for seconds
+  if(DK.fx.rw){ DK.fx.rw.gain.cancelScheduledValues(c); DK.fx.rw.gain.setTargetAtTime(0,c,.06); }
+  DK.fx.send.gain.cancelScheduledValues(c); DK.fx.send.gain.setValueAtTime(0,c);
+  if(T.rxG){ T.rxG.gain.cancelScheduledValues(c); T.rxG.gain.setValueAtTime(0,c); }
+  if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.03); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.03); wWaitPad&&W.waitPad&&wWaitPad(false,c);
   MASTER.gain.setValueAtTime(Math.max(.75,SECVOL[3]),c);
   if(DK.yn){ DK.yn.rainG.gain.setValueAtTime(0,c); DK.yn.drG.gain.setValueAtTime(0,c); }
   const TRx=sect().tr, lowM=midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
-  const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP); const es=ctx.createGain(); es.gain.value=.35; eb.connect(es); es.connect(DK.fx.rev);
+  const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP);   // the gong rings on its own (~5 s), no long reverb
   // one gong, nothing else: crisp strike, rings and fades over ~5 s
   { const f0=mtoh(lowM-12), parts=[[1,1,5],[1.48,.55,4.2],[2.0,.5,4.6],[2.76,.35,3.4],[3.42,.22,2.6],[4.1,.14,1.8],[.5,.45,5]];
     parts.forEach(([r,a,dec],i)=>{const o=ctx.createOscillator(),g3=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f0*r*1.01,hit);o.frequency.exponentialRampToValueAtTime(f0*r,hit+.25);o.detune.value=i%2?4:-4;
@@ -1322,7 +1332,7 @@ function darkOutroStart(tD,w){
   DK.title='终'; DK.titleT=tD; DK.titleKeep=true; flashCol='255,235,190';
   setTimeout(()=>{flashV=1.8;},250);
   DK.outro={t0:tick,ok,startT:tD};
-  setTimeout(()=>{ if(DK.fx) DK.fx.clearRev.gain.setValueAtTime(.25,ctx.currentTime); },6000);
+  setTimeout(()=>{ if(DK.fx){ const n=ctx.currentTime; DK.fx.clearRev.gain.setValueAtTime(.25,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); DK.fx.send.gain.setValueAtTime(.5,n); } if(T&&T.rxG) T.rxG.gain.setValueAtTime(1,ctx.currentTime); },6000);
   const avg=X.pourTime>0?w/X.pourTime:0;
   const sum='总水量 '+Math.round(w)+' g · 用时 '+ts+' · 注水平均 '+avg.toFixed(1)+' g/s'+(GENRE==='walker'?' · '+W.bpm+' BPM · '+W_KEYS[W.key]+' · '+(W.prog||W_PROGS[0]).map(wTr).join('–'):' · 动机 '+DK.motif.map(dkName).join(' '));
   X.summary=sum; X.hold=tD+3; noteEl.textContent='终';
@@ -1546,7 +1556,8 @@ function onTickDark(when,tD){
 /* ================= v4.0 · melodic electronic engine =================
    one language (minor i–VI–III–VII family, pentatonic C E♭ F G B♭ melody cells), the cup chooses everything inside it */
 const W={bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,hold:null};
-function wReset(){RX.x=0;RX.f=0;RX.gate=0;if(W.vo)W.vo.step=null;RX.lastT=null;if(W.wt)W.wt.next=null;Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null,s3n:0});}
+function wReset(){try{ if(typeof DK!=='undefined'&&DK.fx&&ctx){ const n=ctx.currentTime; DK.fx.send.gain.setValueAtTime(.5,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); } if(typeof T!=='undefined'&&T&&T.rxG&&ctx) T.rxG.gain.setValueAtTime(1,ctx.currentTime); }catch(e){}
+  RX.x=0;RX.f=0;RX.gate=0;if(W.vo)W.vo.step=null;RX.lastT=null;if(W.wt)W.wt.next=null;Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null,s3n:0});}
 const W_PROGS=[['Cm','Ab','Eb','Bb'],['Cm','Bb','Ab','Bb'],['Ab','Bb','Cm','Cm'],['Cm','Eb','Bb','Ab']];
 const W_CH={Cm:[48,55,60,63,67],Ab:[44,51,56,60,63],Eb:[51,55,58,63,67],Bb:[46,53,58,62,65]};
 const W_CELLS={
