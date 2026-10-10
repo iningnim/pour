@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.17</title>
+<title>一杯咖啡的样子 v4.18</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.17</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.18</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -309,7 +309,14 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.17</summary>
+    <summary>版本说明 · v4.18</summary>
+    <h2>v4.18</h2>
+    <h3>本版重点（旋律电子 · 等待）</h3>
+    <ul>
+      <li><b>停手就开始集气</b>（取代"停 12 秒后才蓄力"）：0–4 秒呼吸 + 底鼓每小节一下；4 秒起蓄力声从很轻往上推、底鼓每小节两下；8 秒起底鼓每拍一下、蓄力明显推高、倒吸声变强；约 12 秒推满并保持。说明行显示"集气 n%"。</li>
+      <li><b>脉动在手机上听得到</b>：加入 150–400 Hz 的"咚"与起音，音量约 2 倍；刚停手偏远偏闷，越等越近越清楚。蓄力声不再被第一段的低音量压住。</li>
+      <li><b>注水释放</b>：集气超过约三分之一时，再注水的那一拍有一声镲（加底鼓），音乐接上。</li>
+    </ul>
     <h2>v4.17</h2>
     <h3>本版重点（旋律电子）</h3>
     <ul>
@@ -1625,13 +1632,16 @@ function wBreath(when,wait){ // 4-bar breath: 2 bars in, 2 bars out; deeper the 
   p.sg.gain.setTargetAtTime((.008+.03*Math.min(1,wait/14))*(.6+.4*br),when,.4);
   return br;
 }
-function wWallKick(when,br){ // the club through the wall: a muffled kick, nearer on the in-breath
-  const o=ctx.createOscillator(),g=ctx.createGain(),lp=ctx.createBiquadFilter(); o.type='sine'; o.frequency.setValueAtTime(150,when); o.frequency.exponentialRampToValueAtTime(48,when+.11);
-  lp.type='lowpass'; lp.frequency.value=380+420*br; lp.Q.value=.7;
-  const v=.5+.25*br; g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.006); g.gain.exponentialRampToValueAtTime(.0001,when+.5);
-  const sh=shaper(2.2); o.connect(sh); sh.connect(lp); lp.connect(g); g.connect(COMP); o.start(when); o.stop(when+.55);
-  const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nf=ctx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value=500+300*br; const ng=ctx.createGain();
-  ng.gain.setValueAtTime(.07*(.6+.4*br),when); ng.gain.exponentialRampToValueAtTime(.0001,when+.08); n.connect(nf); nf.connect(ng); ng.connect(COMP); n.start(when); n.stop(when+.1); }
+function wWallKick(when,br,acc){ // pulse while waiting: far & muffled at first, nearer and clearer the longer you wait
+  const near=.3+.7*(acc||0);
+  const o=ctx.createOscillator(),g=ctx.createGain(),lp=ctx.createBiquadFilter(); o.type='sine'; o.frequency.setValueAtTime(170,when); o.frequency.exponentialRampToValueAtTime(55,when+.1);
+  lp.type='lowpass'; lp.frequency.value=500+1100*near+300*br; lp.Q.value=.7;
+  const v=(.6+.5*near)*(.85+.15*br); g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.005); g.gain.exponentialRampToValueAtTime(.0001,when+.45);
+  const sh=shaper(3); o.connect(sh); sh.connect(lp); lp.connect(g); g.connect(COMP); o.start(when); o.stop(when+.5);
+  const o2=ctx.createOscillator(),g2=ctx.createGain(); o2.type='triangle'; o2.frequency.setValueAtTime(230,when); o2.frequency.exponentialRampToValueAtTime(120,when+.06);
+  g2.gain.setValueAtTime(0,when); g2.gain.linearRampToValueAtTime(.28*near,when+.004); g2.gain.exponentialRampToValueAtTime(.0001,when+.14); o2.connect(g2); g2.connect(COMP); o2.start(when); o2.stop(when+.16);
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nf=ctx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value=900+1500*near; const ng=ctx.createGain();
+  ng.gain.setValueAtTime(.07*near,when); ng.gain.exponentialRampToValueAtTime(.0001,when+.05); n.connect(nf); nf.connect(ng); ng.connect(COMP); n.start(when); n.stop(when+.07); }
 function wRevSwell(when,dur,v){ // "drawing breath" into the next downbeat
   const n=ctx.createBufferSource(); n.buffer=noiseBuf; n.loop=true; const f=ctx.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.1;
   f.frequency.setValueAtTime(700,when); f.frequency.exponentialRampToValueAtTime(5200,when+dur);
@@ -1708,16 +1718,20 @@ function onTickWalker(when,tD){
       T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(220,c,.05);T.uwG.gain.setTargetAtTime(.15,c,.05);
       if(seg===1&&!W.brightSet){ W.bright=(W.s1flow.length?W.s1flow.reduce((a,b)=>a+b,0)/W.s1flow.length:4)>4.2; W.brightSet=true; }
       wWaitPad(true,c);
-      explain(ts+'　停手：间奏。和弦跟着呼吸一起一伏，隔墙的底鼓，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
+      explain(ts+'　停手：间奏。呼吸、底鼓由远到近，集气从现在开始越积越满，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
     if(stopT<=0) return;
     const wait=Math.max(0,tD-stopT);
     if(seg>=3&&(W.peaked||w>=TARGET-10)&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
     const br=wBreath(when,wait)||0, s16w=((tick%16)+16)%16;
-    if(wait<40&&s16w===0) wWallKick(when,br);
-    if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.05*Math.min(1,wait/12));
-    const rise=wait<12?0:Math.min(1,(wait-12)/13);
-    T.rsF.frequency.setTargetAtTime(Math.min(7000,300*Math.pow(2,rise*4.2)),when,.1); T.rsG.gain.setTargetAtTime(.07*rise,when,.1);
-    if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　间奏 '+wait.toFixed(0)+' 秒（已注 '+Math.round(w)+' / '+TARGET+' g）');
+    // gathering: starts at the stop and fills up over ~12 s, then holds
+    const acc=Math.min(1,wait/12), rise=wait<4?0:Math.min(1,(wait-4)/8);
+    const every=wait<4?16:wait<8?8:4;
+    if(wait<60&&s16w%every===0) wWallKick(when,br,acc);
+    if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.07*acc);
+    const mc=Math.min(4,.85/Math.max(.2,MASTER.gain.value));
+    T.rsF.frequency.setTargetAtTime(Math.min(7500,300*Math.pow(2,rise*4.4)),when,.1); T.rsG.gain.setTargetAtTime((rise>0?.015+.09*rise:0)*mc,when,.1);
+    W.gathered=acc;
+    if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　间奏 '+wait.toFixed(0)+' 秒 · 集气 '+Math.round(acc*100)+'%（已注 '+Math.round(w)+' / '+TARGET+' g）');
     return;
   }
   X.pourTime+=TICK;
@@ -1740,9 +1754,11 @@ function onTickWalker(when,tD){
     inPhrase=true;X.tier=tier; wWaitPad(false,when);
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    if((W.gathered||0)>.33){ wCrash(when,.06+.1*W.gathered); wKick(when,.3,.6+.4*W.gathered); } W.gathered=0;
     X.hold=tD+1.5; explain(ts+'　继续'+sect().name);
   } else if(!inPhrase){
     inPhrase=true;X.tier=tier;DK.startedSeg=seg; wWaitPad(false,when);
+    if((W.gathered||0)>.33&&SN>=2){ wCrash(when,.06+.1*W.gathered); } W.gathered=0;
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     MASTER.gain.cancelScheduledValues(when);MASTER.gain.setTargetAtTime(SECVOL[SN],when,SN===1?.3:.05);
