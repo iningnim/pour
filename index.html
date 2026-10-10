@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.16</title>
+<title>一杯咖啡的样子 v4.17</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.16</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.17</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -309,7 +309,14 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.16</summary>
+    <summary>版本说明 · v4.17</summary>
+    <h2>v4.17</h2>
+    <h3>本版重点（旋律电子）</h3>
+    <ul>
+      <li><b>第二段封顶</b>：流速层次最多到 5 g/s 以下那些（没有锯齿主奏、每小节镲、双倍鼓、低八度贝斯，旋律不升八度）；亮度最高约 6 kHz，整体低约 3 dB，抽吸浅、琶音窄。</li>
+      <li><b>第三段换一套、一定更大</b>：整体升高一个全音；四拍底鼓配强抽吸；锯齿和弦、合唱、低八度贝斯一直在；旋律始终叠锯齿主奏；琶音拉宽；亮度全开、比第二段响约 3–4 dB。</li>
+      <li><b>等待的脉动换成"隔墙的底鼓"</b>：像隔壁舞池传来的闷底鼓，每小节一下，吸气时近、呼气时远；去掉原来的"咚—哒"合成心跳。呼吸、倒吸声、悬着的音保留。</li>
+    </ul>
     <h2>v4.16</h2>
     <h3>本版重点（旋律电子）</h3>
     <ul>
@@ -1542,7 +1549,7 @@ const W_CELLS={
  Bb:[[[2,3],[1,1],[0,2],[-1,2]],[[-1,2],[0,1],[1,1],[2,4]],[[2,1],[1,1],[2,2],[-1,4]]]};
 const W_KEYS={0:'C 小调',2:'D 小调','-3':'A 小调','-2':'B♭ 小调'};
 const NN12=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
-function wK(m){return m+W.key;}
+function wK(m){return m+W.key+(seg>=3?2:0);}   // section 3 lifts a whole step
 function wDeg(d){ // pentatonic degree (C5 = 0) → the selected scale; Yunnan is the tuned one
   const D=(scale.deg2&&seg>=2)?scale.deg2:scale.deg, n=D.length;
   if(n===5) return 72+12*Math.floor(d/5)+D[((d%5)+5)%5];
@@ -1618,6 +1625,13 @@ function wBreath(when,wait){ // 4-bar breath: 2 bars in, 2 bars out; deeper the 
   p.sg.gain.setTargetAtTime((.008+.03*Math.min(1,wait/14))*(.6+.4*br),when,.4);
   return br;
 }
+function wWallKick(when,br){ // the club through the wall: a muffled kick, nearer on the in-breath
+  const o=ctx.createOscillator(),g=ctx.createGain(),lp=ctx.createBiquadFilter(); o.type='sine'; o.frequency.setValueAtTime(150,when); o.frequency.exponentialRampToValueAtTime(48,when+.11);
+  lp.type='lowpass'; lp.frequency.value=380+420*br; lp.Q.value=.7;
+  const v=.5+.25*br; g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.006); g.gain.exponentialRampToValueAtTime(.0001,when+.5);
+  const sh=shaper(2.2); o.connect(sh); sh.connect(lp); lp.connect(g); g.connect(COMP); o.start(when); o.stop(when+.55);
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nf=ctx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value=500+300*br; const ng=ctx.createGain();
+  ng.gain.setValueAtTime(.07*(.6+.4*br),when); ng.gain.exponentialRampToValueAtTime(.0001,when+.08); n.connect(nf); nf.connect(ng); ng.connect(COMP); n.start(when); n.stop(when+.1); }
 function wRevSwell(when,dur,v){ // "drawing breath" into the next downbeat
   const n=ctx.createBufferSource(); n.buffer=noiseBuf; n.loop=true; const f=ctx.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.1;
   f.frequency.setValueAtTime(700,when); f.frequency.exponentialRampToValueAtTime(5200,when+dur);
@@ -1630,7 +1644,7 @@ function waitBeat2(when,v){ // lub-dub: the softer, higher second beat
 /* ---------- v4.11: the hand drives the sound in real time ---------- */
 const RX={x:0,f:0,gate:0,lastT:null,neutral:true}; let VOICEVOL=1;
 function lv(a){ return Math.max(0,Math.min(1,(RX.f-a)/.25)); }
-function wLayer(){ const F=RX.f; return F<2.25?1:Math.min(17,2+Math.floor((F-2.25)/.25)); }
+function wLayer(){ const F=RX.f; return F<2.25?1:Math.min(seg===2?12:17,2+Math.floor((F-2.25)/.25)); }
 function wKick(when,floor,v){ tKick(when,true,floor,v); noiseHit(when,'bandpass',2600,1.2,.09*v,.025,T.duck); }
 function wClap(when,v){[0,.012,.026].forEach((o,i)=>noiseHit(when+o,'bandpass',1500,.9,v*(i===2?1:.6),i===2?.18:.03,T.duck));}
 function wCrash(when,v){ noiseHit(when,'highpass',6000,.5,v,1.4,T.duck); }
@@ -1647,7 +1661,7 @@ function wReact(tD){ // called every animation frame (data time tD)
   if(pour){ RX.f+=(sm.f-RX.f)*Math.min(1,dt/.25); RX.x=Math.max(0,Math.min(1,(RX.f-2)/4)); }
   RX.gate+=((pour?1:0)-RX.gate)*Math.min(1,dt/(pour?.06:.12));
   const x=RX.x, gt=RX.gate;
-  const cut=300+(16000-300)*Math.pow(gt*(.1+.9*x),1.8), vol=.25+.75*gt*(.35+.65*x)+.15*gt*lv(6.0);
+  const S3r=seg>=3, cut=Math.min(S3r?16000:6000,300+(16000-300)*Math.pow(gt*(.1+.9*x),1.8)), vol=(.25+.75*gt*(.35+.65*x)+(S3r?.15*gt*lv(6.0):0))*(S3r?1:.68);
   if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(.35+.45*x,c,.1);
   T.rxF.frequency.setTargetAtTime(cut,c,.03); T.rxG.gain.setTargetAtTime(vol*(1-.2*gt*VOICEVOL),c,.03); RX.neutral=false;
   wVoice(gt,c);
@@ -1694,12 +1708,12 @@ function onTickWalker(when,tD){
       T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(220,c,.05);T.uwG.gain.setTargetAtTime(.15,c,.05);
       if(seg===1&&!W.brightSet){ W.bright=(W.s1flow.length?W.s1flow.reduce((a,b)=>a+b,0)/W.s1flow.length:4)>4.2; W.brightSet=true; }
       wWaitPad(true,c);
-      explain(ts+'　停手：间奏。和弦跟着呼吸一起一伏，心跳，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
+      explain(ts+'　停手：间奏。和弦跟着呼吸一起一伏，隔墙的底鼓，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
     if(stopT<=0) return;
     const wait=Math.max(0,tD-stopT);
     if(seg>=3&&(W.peaked||w>=TARGET-10)&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
     const br=wBreath(when,wait)||0, s16w=((tick%16)+16)%16;
-    if(wait<40){ if(s16w===0) waitBeat(when); if(s16w===2) waitBeat2(when,.7+.5*br); }
+    if(wait<40&&s16w===0) wWallKick(when,br);
     if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.05*Math.min(1,wait/12));
     const rise=wait<12?0:Math.min(1,(wait-12)/13);
     T.rsF.frequency.setTargetAtTime(Math.min(7000,300*Math.pow(2,rise*4.2)),when,.1); T.rsG.gain.setTargetAtTime(.07*rise,when,.1);
@@ -1747,6 +1761,7 @@ function onTickWalker(when,tD){
   } else {
   // ---------- v4.14: 17 flow layers (2–6 g/s, every 0.25 g/s), S2 restrained, S3 = short build → peak until the hand stops
   const norm=RX.x, F=RX.f, S3=SN===3;
+  const L2=a=>(S3||a<5.0)?lv(a):0;   // section 2 is capped below 5 g/s worth of layers
   let phase='groove';
   if(S3){
     if(realPour) W.s3n=(W.s3n||0)+1;
@@ -1769,53 +1784,53 @@ function onTickWalker(when,tD){
   const peak=phase==='peak', build=phase==='build';
   // chords + bar bookkeeping
   if(s16===0){
-    const chA=S3?Math.max(.35,lv(2.5)):lv(2.5);
-    if(!S3){ if(chA>.05) wSaws(ch.slice(1),when,BARd,.028*chA,900+1800*lv(2.25)+1500*norm,[-8,0,8],.5,true);
-      if(F<2.5) wPiano(ch[2],when,BARd*.9,.06); else if(F<3.25) ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*.012,BARd*.9,.05*(1-.6*lv(3.0)))); }
-    else { const o=wSaws(ch.slice(1),when,BARd,((peak?.04:.03)+.012*lv(6.0))*chA,build?900:2600+3200*norm,[-18,-9,-3,3,9,18],.01,true);
+    const chA=S3?Math.max(.35,L2(2.5)):L2(2.5);
+    if(!S3){ if(chA>.05) wSaws(ch.slice(1),when,BARd,.028*chA,900+1800*L2(2.25)+1500*norm,[-8,0,8],.5,true);
+      if(F<2.5) wPiano(ch[2],when,BARd*.9,.06); else if(F<3.25) ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*.012,BARd*.9,.05*(1-.6*L2(3.0)))); }
+    else { const o=wSaws(ch.slice(1),when,BARd,((peak?.04:.03)+.012*L2(6.0))*chA,build?900:2600+3200*norm,[-18,-9,-3,3,9,18],.01,true);
       if(build){ o.fl.frequency.setValueAtTime(700,when); o.fl.frequency.exponentialRampToValueAtTime(2500+2500*norm,when+BARd); }
       if(peak) choir([ch[2]+12,ch[3]+12],when,BARd,(.05+.05*norm)*chA); }
     wCell(b,f,tD);
-    if(peak&&lv(5.5)>.05) wCrash(when,.1*lv(5.5));
-    if(!S3&&lv(5.5)>.05) wCrash(when,.06*lv(5.5));
+    if(peak&&L2(5.5)>.05) wCrash(when,.1*L2(5.5));
+    if(!S3&&L2(5.5)>.05) wCrash(when,.06*L2(5.5));
     if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(b%8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · '+{build:'酝酿',peak:'顶点',groove:''}[phase]:'')+' · 第 '+wLayer()+'/17 层 · '+F.toFixed(1)+' g/s · 已注 '+Math.round(w)+' g');
   }
   // melody, note by note: below 4 g/s only the long notes; passing notes from 4.25; saw lead from 5.25 (always some in the peak)
   if(!build&&!W.gap){ const cell=W.hook[((b%8)+8)%8]; if(cell){ let pos=0;
     for(const [m,ln] of cell){ if(pos===s16&&m!==null){
-        const k=(.4+1.0*norm)*(ln<2?lv(4.0):1), oct=F<3.0?-12:F>5.0?12:0, tim=F<3.0?'piano':F>5.0?'pluck':(W.bright?'pluck':'piano');
+        const k=(.4+1.0*norm)*(ln<2?L2(4.0):1), oct=F<3.0?-12:(S3&&F>5.0)?12:0, tim=F<3.0?'piano':(S3&&F>5.0)?'pluck':(W.bright?'pluck':'piano');
         if(k>.08){ const mm=wK(wDeg(m))+oct; wLeadT(mm,when,ln*e8,SN,peak&&oct<12,k,tim);
-          const sl=Math.max(peak?.5:0,lv(5.25)); if(sl>.05) wSaws([mm+12],when,ln*e8*.95,.018*sl,3500,[-12,0,12],.01,false);
-          if(ln>=2&&lv(4.25)>.05){ const nx=wK(wDeg(m+1)), a=lv(4.25); if(W.bright) wPluck(nx,when+(ln-1)*e8,e8,.08*a); else wPiano(nx,when+(ln-1)*e8,e8,.11*a); } } }
+          const sl=Math.max(S3?.6:0,L2(5.25)); if(sl>.05) wSaws([mm+12],when,ln*e8*.95,.018*sl,3500,[-12,0,12],.01,false);
+          if(ln>=2&&L2(4.25)>.05){ const nx=wK(wDeg(m+1)), a=L2(4.25); if(W.bright) wPluck(nx,when+(ln-1)*e8,e8,.08*a); else wPiano(nx,when+(ln-1)*e8,e8,.11*a); } } }
       pos+=ln*2; } } }
   // arpeggio sparkle from 4.75, wider with the flow
-  const arpA=.03*lv(4.75)+.04*lv(5.0)+(peak?.012:0);
-  if(realPour&&!build&&arpA>.004){ const ar=ch.slice(1)[[0,1,2,3,2,1][s16%6]]+24; wPluck(ar,when,TICK*.9,arpA,(s16%2?1:-1)*(.2+.7*norm)); }
+  const arpA=.03*L2(4.75)+.04*L2(5.0)+(peak?.012:0);
+  if(realPour&&!build&&arpA>.004){ const ar=ch.slice(1)[[0,1,2,3,2,1][s16%6]]+24; wPluck(ar,when,TICK*.9,arpA,(s16%2?1:-1)*(S3?(.5+.5*norm):(.1+.25*norm))); }
   if(realPour&&s16%2===0) wPings(when,tD,f);
   // drums + bass
-  const floor=1-Math.min(.9,.3+.6*norm);
+  const floor=S3?.08:1-Math.min(.6,.25+.35*norm);
   if(build){
     const prog=Math.min(1,(W.s3n||0)/28), iv=prog<.4?4:prog<.75?2:1, ivF=norm>.6?Math.max(1,iv/2):iv;
     if(tick%ivF===0) noiseHit(when,'bandpass',1900+prog*900,.8,(.05+.15*prog)*(.6+.6*norm),.07,T.duck);
     T.rsF.frequency.setTargetAtTime(Math.min(9000,300*Math.pow(2,prog*4.6*(.7+.5*norm))),when,.08); T.rsG.gain.setTargetAtTime((.03+.12*prog*prog)*(.6+.6*norm),when,.08);
     if(s16===0) wBass(root,when,BARd*.9,.1);
   } else {
-    const halfT=F<3.0, dbl=F>5.0;
-    if(S3){ const kv=.55+.45*lv(2.75); if(halfT?(s16===0||s16===8):(s16%4===0||(dbl&&s16===14))) wKick(when,floor,kv); }
-    else { const k1=.5*lv(2.5)+.5*lv(2.75), k3=lv(2.75);
+    const halfT=F<3.0, dbl=S3&&F>5.0;
+    if(S3){ const kv=.55+.45*L2(2.75); if(halfT?(s16===0||s16===8):(s16%4===0||(dbl&&s16===14))) wKick(when,floor,kv); }
+    else { const k1=.5*L2(2.5)+.5*L2(2.75), k3=L2(2.75);
       if(s16===0&&k1>.05) wKick(when,floor,.4+.6*k1);
       if(s16===8&&k3>.05&&!halfT) wKick(when,floor,.4+.6*k3);
       if(dbl&&(s16===4||s16===12)) wKick(when,floor,.6);
       if(s16===8&&k3<.6) noiseHit(when,'bandpass',2400,2,.045,.03,T.duck); }
-    const bo=S3?Math.max(.6,lv(3.0)):lv(3.0), bn=S3?Math.max(.5,lv(3.25)):lv(3.25), bl=lv(5.75);
+    const bo=S3?Math.max(.6,L2(3.0)):L2(3.0), bn=S3?Math.max(.5,L2(3.25)):L2(3.25), bl=S3?Math.max(.6,L2(5.75)):0;
     if(s16%4===2&&bo>.05) wBass(root+12,when,e8*.9,.16*bo);
     if(s16%4===0&&bn>.05) wBass(root+12*(S3?(s16/4)%2:1),when,e8*.9,.15*bn);
     if(s16%8===0&&bl>.05) wBass(root,when,e8*1.8,.12*bl);
-    const h8=Math.max(S3?.4:0,lv(3.5)), h16=lv(4.5), ho=Math.max(S3?.6:0,lv(5.0));
+    const h8=Math.max(S3?.4:0,L2(3.5)), h16=L2(4.5), ho=Math.max(S3?.6:0,L2(5.0));
     if(s16%2===0&&h8>.05&&!(halfT&&s16%4!==0)) tHat(when,.05*h8,false);
     if(s16%2===1&&(h16>.05||dbl)) tHat(when,.035*Math.max(h16,dbl?.8:0),false);
     if(s16%4===2&&ho>.05) tHat(when,.08*ho,true);
-    const cl=Math.max(S3?1:0,lv(3.75));
+    const cl=Math.max(S3?1:0,L2(3.75));
     if(cl>.05){ if(halfT?(s16===8):(s16===4||s16===12)) wClap(when,(S3?.3:.24)*cl); if(dbl&&(s16===2||s16===6||s16===10||s16===14)) wClap(when,(S3?.14:.11)*cl); }
     if(S3&&b%4===3&&s16>=12&&norm>.3) noiseHit(when,'bandpass',1900,.8,.06+.08*norm,.07,T.duck);
   }
