@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.5</title>
+<title>一杯咖啡的样子 v4.6</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -142,7 +142,7 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.5</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.6</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -269,7 +269,13 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.5</summary>
+    <summary>版本说明 · v4.6</summary>
+    <h2>v4.6</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>修复 iPhone 上按钮全部点不动</b>：v4.4 新加的变量名（如 UUID）与 Bluefy 注入网页的代码撞名，导致整页程序不运行。全部改成 bk 开头的名字。</li>
+      <li>其余与 v4.5 相同：完整蓝牙编号、自动列出所有设备、出错标明步骤、不加载外部字体。</li>
+    </ul>
     <h2>v4.5</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1754,22 +1760,22 @@ function onPacket(b){
   live.lastF=live.ef; live.lastW=w; data.total=Math.max(250,w);
 }
 let showAll=false;
-const UUID=n=>'0000'+n.toString(16).padStart(4,'0')+'-0000-1000-8000-00805f9b34fb';
-const SVC=UUID(0x0FFE), CH_W=UUID(0xFF11), CH_C=UUID(0xFF12);
-const errTxt=e=>(e&&e.name?e.name+'：':'')+(e&&e.message!==undefined?e.message:String(e));
+const bkUuid=n=>'0000'+n.toString(16).padStart(4,'0')+'-0000-1000-8000-00805f9b34fb';
+const bkSvc=bkUuid(0x0FFE), bkChW=bkUuid(0xFF11), bkChC=bkUuid(0xFF12);
+const bkErrTxt=e=>(e&&e.name?e.name+'：':'')+(e&&e.message!==undefined?e.message:String(e));
 async function connectScale(){
   if(!navigator.bluetooth){ status(/iPhone|iPad|iPod/.test(navigator.userAgent)?'iPhone 上的 Safari 和 Chrome 不支持网页蓝牙。请在 App Store 下载 Bluefy 浏览器，用它打开本页面。':'这个浏览器不支持网页蓝牙。请用安卓或电脑上的 Chrome 打开本页面。'); return; }
   let stepName='打开蓝牙列表', dev;
   try{
     status(showAll?'正在打开蓝牙列表（所有设备）…':'正在打开蓝牙列表…');
-    const optAll={acceptAllDevices:true,optionalServices:[SVC]};
-    const optName={filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'}],optionalServices:[SVC]};
+    const optAll={acceptAllDevices:true,optionalServices:[bkSvc]};
+    const optName={filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'}],optionalServices:[bkSvc]};
     if(showAll) dev=await navigator.bluetooth.requestDevice(optAll);
     else{
       try{ dev=await navigator.bluetooth.requestDevice(optName); }
       catch(e1){
         if(e1&&e1.name==='NotFoundError') throw e1;           // user cancelled / nothing chosen
-        status('按名字找秤失败（'+errTxt(e1)+'），改为列出所有蓝牙设备，请选 BOOKOO…');
+        status('按名字找秤失败（'+bkErrTxt(e1)+'），改为列出所有蓝牙设备，请选 BOOKOO…');
         dev=await navigator.bluetooth.requestDevice(optAll);
       }
     }
@@ -1777,9 +1783,9 @@ async function connectScale(){
     stepName='连接秤'; status('正在连接 '+(dev.name||'')+'…');
     let server; for(let a=0;a<3;a++){ try{server=await dev.gatt.connect();break;}catch(e){ if(a===2) throw e; status('连接没成功，第 '+(a+2)+' 次重试…'); await new Promise(r=>setTimeout(r,800)); } }
     stepName='找数据服务';
-    let svc; try{svc=await server.getPrimaryService(SVC);}catch(e){status('连上了“'+(dev.name||'未命名设备')+'”，但找不到秤的数据服务（'+errTxt(e)+'）。请确认选的是 BOOKOO 秤。');try{dev.gatt.disconnect();}catch(_){}return;}
+    let svc; try{svc=await server.getPrimaryService(bkSvc);}catch(e){status('连上了“'+(dev.name||'未命名设备')+'”，但找不到秤的数据服务（'+bkErrTxt(e)+'）。请确认选的是 BOOKOO 秤。');try{dev.gatt.disconnect();}catch(_){}return;}
     stepName='找数据通道';
-    const wt=await svc.getCharacteristic(CH_W); BLE.cmd=await svc.getCharacteristic(CH_C);
+    const wt=await svc.getCharacteristic(bkChW); BLE.cmd=await svc.getCharacteristic(bkChC);
     stepName='开始接收数据';
     wt.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;onPacket(new Uint8Array(v.buffer,v.byteOffset,v.byteLength));});
     await wt.startNotifications();
@@ -1788,7 +1794,7 @@ async function connectScale(){
   }catch(e){
     if(e&&e.name==='NotFoundError'&&stepName==='打开蓝牙列表'){ status(showAll?'没有选择设备。':'没有选到秤。可以点“显示所有蓝牙设备”再试。'); document.getElementById('bleAll').hidden=false; }
     else if(e&&e.name==='SecurityError') status('【'+stepName+'】浏览器拒绝了蓝牙权限：'+e.message);
-    else status('【'+stepName+'】失败：'+errTxt(e)+'。请确认手机蓝牙已打开、浏览器有蓝牙权限，秤已开机且没有被 Bookoo App 占用。');
+    else status('【'+stepName+'】失败：'+bkErrTxt(e)+'。请确认手机蓝牙已打开、浏览器有蓝牙权限，秤已开机且没有被 Bookoo App 占用。');
     document.getElementById('bleAll').hidden=false;
   }
 }
