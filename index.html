@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.9</title>
+<title>一杯咖啡的样子 v4.10</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -149,7 +149,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.9</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.10</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -280,7 +280,14 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.9</summary>
+    <summary>版本说明 · v4.10</summary>
+    <h2>v4.10</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>停手反应更快</b>：换气窗口由 3 秒改为 1.5 秒——停手 1.5 秒内音乐照常（稍轻），超过 1.5 秒旋律收住转为心跳等待。</li>
+      <li><b>换段同样 1.5 秒</b>：停手超过 1.5 秒且累计达到 30 g / 110 g（随目标缩放），再注水进入下一段；水量门槛不变，防止误换段。</li>
+      <li>第三段结尾 0.6 秒、等待 12 秒后蓄力，均不变。</li>
+    </ul>
     <h2>v4.9</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1356,7 +1363,7 @@ function onTickDark(when,tD){
   if(DK.outro){ darkOutroTick(when,tD); return; }
   if(X.ended) return;
   if(realPour){ DK.lastPourT=tD; DK.lastF=sm.f; }
-  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<3;
+  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<1.5;
   if(breath&&seg>=3&&(DK.peaked||w>=TARGET-10)&&sinceStop>=.6){ playEnding(tD,w); return; }
   const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
   if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); if(breath&&!DK.breathMsg){DK.breathMsg=true;if(!(tD<(X.hold||0)))explain(ts+'　换气：短暂停顿，音乐稍微变轻但不中断');} if(realPour) DK.breathMsg=false; }
@@ -1393,7 +1400,7 @@ function onTickDark(when,tD){
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     ynSet(SN===1?.005:SN===2?.004:0, SN===1?.015:SN===2?.012:.02, when);
     const kT=TARGET/240, need=[0,30*kT,110*kT][Math.min(2,seg)];
-    X.hold=tD+1.5; explain(ts+'　继续'+sect().name+'（累计 '+Math.round(w)+' g，'+(seg<3?'到 '+Math.round(need)+' g 并停手 3 秒以上才进入下一段':'最后一段')+'）');
+    X.hold=tD+1.5; explain(ts+'　继续'+sect().name+'（累计 '+Math.round(w)+' g，'+(seg<3?'到 '+Math.round(need)+' g 并停手 1.5 秒以上才进入下一段':'最后一段')+'）');
   } else if(!inPhrase){
     inPhrase=true;X.tier=tier;DK.startedSeg=seg;
     const waited=Math.max(0,tD-stopT);
@@ -1520,7 +1527,7 @@ function onTickWalker(when,tD){
   if(DK.outro){ return; }
   if(X.ended) return;
   if(realPour){ DK.lastPourT=tD; DK.lastF=sm.f; }
-  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<3;
+  const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<1.5;
   if(breath&&seg>=3&&(W.peaked||w>=TARGET-10)&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
   const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
   if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); }
@@ -1637,7 +1644,7 @@ function step(dt){
   const {f,w}=sample(t), R=S*.46;
   if(f>=THR){
     const kT=TARGET/240, need=[0,30*kT,110*kT,1e9][Math.min(3,seg)];
-    if(!wasPouring && (seg===0 || (STYLE==='techno'&&isDK() ? (quiet>3 && w>=need) : quiet>1))){seg++;setDrone();if(STYLE==='techno'){TICK=60/sect().bpm/4;}nextTickD=Math.round(t*1000)/1000;tick=(STYLE==='acoustic'&&scale.meter==='bambuco'&&!(scale.deg2&&seg<2))?1:-1;}
+    if(!wasPouring && (seg===0 || (STYLE==='techno'&&isDK() ? (quiet>1.5 && w>=need) : quiet>1))){seg++;setDrone();if(STYLE==='techno'){TICK=60/sect().bpm/4;}nextTickD=Math.round(t*1000)/1000;tick=(STYLE==='acoustic'&&scale.meter==='bambuco'&&!(scale.deg2&&seg<2))?1:-1;}
     wasPouring=true;quiet=0;
     const [px,py]=toPx(pourPoint(t));
     sg.fillStyle='rgba(35,18,8,0.035)';sg.beginPath();sg.arc(px,py,S*(.012+.018*f/MAXF),0,Math.PI*2);sg.fill();
