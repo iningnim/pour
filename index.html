@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.10</title>
+<title>一杯咖啡的样子 v4.11</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -149,7 +149,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.10</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.11</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -280,7 +280,15 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.10</summary>
+    <summary>版本说明 · v4.11</summary>
+    <h2>v4.11</h2>
+    <h3>本版重点（旋律电子）</h3>
+    <ul>
+      <li><b>停手立刻听得出</b>：断水约 0.12 秒内声音变暗、变轻（只剩一点底子），水回来马上亮回去；1.5 秒才决定旋律是否完全停。</li>
+      <li><b>倒快 = 亮、满、响；倒慢 = 暗、空、远</b>：流速每一帧实时控制整体亮度（滤波 220 Hz–16 kHz）与音量；旋律逐音判断——慢手只留长音骨架，快手加高八度和经过音；快手还有十六分音琶音闪光；镲由稀疏 → 八分 → 十六分；底鼓抽吸随流速加深。</li>
+      <li><b>水声层</b>：一层沙沙声随流速变大、变亮，加上高处的水滴音，倒得越快越密、越高；停手即消失。</li>
+      <li>速度（BPM）在每段内仍固定；没有随机：同样的数据得到同样的音乐。</li>
+    </ul>
     <h2>v4.10</h2>
     <h3>本版重点</h3>
     <ul>
@@ -960,7 +968,7 @@ function shaper(k){const n=1024,c=new Float32Array(n);for(let i=0;i<n;i++){const
 function technoSetup(){
   if(T) return; T={};
   T.uwF=ctx.createBiquadFilter();T.uwF.type='lowpass';T.uwF.frequency.value=20000;T.uwF.Q.value=.8;T.uwG=ctx.createGain();
-  T.uwF.connect(T.uwG);T.uwG.connect(MASTER);const rs=ctx.createGain();rs.gain.value=.3;T.uwG.connect(rs);rs.connect(REV);
+  T.uwF.connect(T.uwG);T.rxF=ctx.createBiquadFilter();T.rxF.type='lowpass';T.rxF.frequency.value=20000;T.rxF.Q.value=.5;T.rxG=ctx.createGain();T.uwG.connect(T.rxF);T.rxF.connect(T.rxG);T.rxG.connect(MASTER);const rs=ctx.createGain();rs.gain.value=.3;T.uwG.connect(rs);rs.connect(REV);
   T.duck=ctx.createGain();T.duck.connect(T.uwF);
   T.kickBus=ctx.createGain();T.kickBus.gain.value=.9;const ks=shaper(3.5);T.kickBus.connect(ks);ks.connect(T.uwF);
   const nz=ctx.createBufferSource();nz.buffer=noiseBuf;nz.loop=true;T.rsF=ctx.createBiquadFilter();T.rsF.type='bandpass';T.rsF.Q.value=5;T.rsF.frequency.value=300;
@@ -972,11 +980,11 @@ function technoSetup(){
   T.dl=ctx.createDelay(1);T.dl.delayTime.value=.346;const fb=ctx.createGain();fb.gain.value=.45;T.dl.connect(fb);fb.connect(T.dl);
   const dw=ctx.createGain();dw.gain.value=.32;T.dl.connect(dw);dw.connect(MASTER);
 }
-function tKick(when,quiet){
+function tKick(when,quiet,floor){
   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(170,when);o.frequency.exponentialRampToValueAtTime(42,when+.08);
   g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(1,when+.003);g.gain.setValueAtTime(1,when+.06);g.gain.exponentialRampToValueAtTime(.0001,when+.42);
   o.connect(g);g.connect(T.kickBus);o.start(when);o.stop(when+.45);if(!quiet)flashV=1;
-  const d=T.duck.gain;d.cancelScheduledValues(when);d.setValueAtTime(.15,when);d.linearRampToValueAtTime(1,when+.2);
+  const d=T.duck.gain;d.cancelScheduledValues(when);d.setValueAtTime(floor===undefined?.15:floor,when);d.linearRampToValueAtTime(1,when+.2);
 }
 function tRumble(m,when,v){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';o.frequency.value=hz(m);
   g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.004);g.gain.exponentialRampToValueAtTime(.0001,when+.11);o.connect(g);g.connect(T.rumIn);o.start(when);o.stop(when+.13);}
@@ -1459,7 +1467,7 @@ function onTickDark(when,tD){
 /* ================= v4.0 · melodic electronic engine =================
    one language (minor i–VI–III–VII family, pentatonic C E♭ F G B♭ melody cells), the cup chooses everything inside it */
 const W={bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,hold:null};
-function wReset(){Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null});}
+function wReset(){RX.x=0;RX.gate=0;RX.lastT=null;if(W.wt)W.wt.next=null;Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null});}
 const W_PROGS=[['Cm','Ab','Eb','Bb'],['Cm','Bb','Ab','Bb'],['Ab','Bb','Cm','Cm'],['Cm','Eb','Bb','Ab']];
 const W_CH={Cm:[48,55,60,63,67],Ab:[44,51,56,60,63],Eb:[51,55,58,63,67],Bb:[46,53,58,62,65]};
 const W_CELLS={
@@ -1502,6 +1510,11 @@ function wLead(m,when,dur,SN,peak){
   else { wPiano(m,when,dur,.16); wPiano(m+12,when,dur,.04); if(SN===3) wPluck(m,when,dur,.07); }
   if(peak){ wPluck(m-12,when,dur,.06); wPluck(m+12,when,dur,.04); }
 }
+function wLeadV(m,when,dur,SN,peak,k){
+  if(W.bright){ wPluck(m,when,dur,.11*k); wPluck(m+12,when,dur,.045*k); }
+  else { wPiano(m,when,dur,.16*k); wPiano(m+12,when,dur,.04*k); if(SN===3) wPluck(m,when,dur,.07*k); }
+  if(peak){ wPluck(m-12,when,dur,.06); wPluck(m+12,when,dur,.04); }
+}
 function wSaws(ms,when,dur,v,cut,detunes,att,duck){
   const fl=ctx.createBiquadFilter(),g=ctx.createGain();fl.type='lowpass';fl.frequency.value=cut;fl.Q.value=.7;
   g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+att);g.gain.setValueAtTime(v,when+Math.max(att,dur-.15));g.gain.linearRampToValueAtTime(0,when+dur+.25);
@@ -1520,6 +1533,34 @@ function wWaitPad(on,when){
     fl.connect(g); g.connect(MASTER); W.waitPad={g,os}; }
   if(!on&&W.waitPad){ const p=W.waitPad; W.waitPad=null; p.g.gain.cancelScheduledValues(when); p.g.gain.setTargetAtTime(0,when,.15); p.os.forEach(o=>o.stop(when+1)); }
 }
+/* ---------- v4.11: the hand drives the sound in real time ---------- */
+const RX={x:0,gate:0,lastT:null,neutral:true};
+function rxTarget(f){ return Math.max(0,Math.min(1,(f-1.8)/4.4)); }
+function wReact(tD){ // called every animation frame (data time tD)
+  if(!ctx||!T||!T.rxF) return; const c=ctx.currentTime;
+  if(GENRE!=='walker'||!inPhrase||X.ended||DK.outro){
+    if(!RX.neutral){ T.rxF.frequency.setTargetAtTime(20000,c,.05); T.rxG.gain.setTargetAtTime(1,c,.05); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.05); RX.neutral=true; }
+    RX.lastT=tD; return; }
+  const dt=RX.lastT===null?0:Math.max(0,Math.min(.25,tD-RX.lastT)); RX.lastT=tD;
+  const sm=sample(tD), pour=sm.f>=THR;
+  if(pour) RX.x+=(rxTarget(sm.f)-RX.x)*Math.min(1,dt/.2);
+  RX.gate+=((pour?1:0)-RX.gate)*Math.min(1,dt/(pour?.06:.12));
+  const x=RX.x, gt=RX.gate;
+  const cut=220+(16000-220)*Math.pow(gt*(.12+.88*x),2), vol=.22+.78*gt*(.45+.55*x);
+  T.rxF.frequency.setTargetAtTime(cut,c,.03); T.rxG.gain.setTargetAtTime(vol,c,.03); RX.neutral=false;
+  wWater(); W.wt.g.gain.setTargetAtTime(.022*x*gt+.004*gt,c,.05); W.wt.f.frequency.setTargetAtTime(1800+3800*x,c,.08);
+}
+function wWater(){ if(W.wt) return; const n=ctx.createBuffer(2,ctx.sampleRate*2,ctx.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=n.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  const src=ctx.createBufferSource();src.buffer=n;src.loop=true;const f=ctx.createBiquadFilter();f.type='bandpass';f.Q.value=1.4;f.frequency.value=2500;
+  const g=ctx.createGain();g.gain.value=0;src.connect(f);f.connect(g);g.connect(MASTER);src.start(); W.wt={f,g,next:null}; }
+function wPing(m,when,v){ const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=mtoh(m);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(v,when+.003);g.gain.setTargetAtTime(0,when+.004,.035);
+  o.connect(g); dkFx(); g.connect(DK.fx.clear); o.start(when);o.stop(when+.25); }
+function wPings(when,tD,f){ // droplets: rate and pitch from the flow (data time → deterministic)
+  wWater(); const x=RX.x; if(W.wt.next===null||W.wt.next<tD-TICK) W.wt.next=tD;
+  while(W.wt.next<tD+TICK){ const k=Math.floor(f*3), m=wK(wDeg(5+(k%5)))+12*(Math.floor(k/5)%2);
+    wPing(m,when+Math.max(0,W.wt.next-tD),.018+.04*x); W.wt.next+=1/(2+18*x); } }
 function onTickWalker(when,tD){
   technoSetup(); dkFx();
   const sm=sample(tD), w=sm.w, realPour=sm.f>=THR, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
@@ -1609,17 +1650,24 @@ function onTickWalker(when,tD){
       else { const o=wSaws(ch.slice(1),when,BARd,peak?.045:.035,build?900:(peak?5200:4000),[-18,-9,-3,3,9,18],.01,true);
         if(build){ o.fl.frequency.setValueAtTime(700,when); o.fl.frequency.exponentialRampToValueAtTime(3500,when+BARd); }
         if(phase!=='land') choir([ch[2]+12,ch[3]+12],when,BARd,peak?.09:.05); }
-      // melody: the cup's hook, one cell per bar
-      const cell=wCell(b,f,tD); let t=when;
-      cell.forEach(([m,ln])=>{ if(m!==null) wLead(wK(wDeg(m)),t,ln*e8,SN,peak); t+=ln*e8; });
+      wCell(b,f,tD);   // the bar's cell is chosen at the downbeat (as before); notes are played tick by tick below
       if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(b%8+1)+' 小节：'+wTr(wChordName(b))+' · 句型 '+(((W.hookWhy||[])[b%8]??0)+1)+(SN===3?' · '+{drop:'Drop',build:'攀升',peak:'顶点',land:'落地'}[phase]:'')+' · 已注 '+Math.round(w)+' / '+TARGET+' g');
     }
+    // melody note by note: a slow hand keeps only the long notes, a fast hand adds octave + passing notes
+    { const cell=W.hook[((b%8)+8)%8], peakNow=phase==='peak', x=RX.x; if(cell&&!W.gap){ let pos=0;
+      for(const [m,ln] of cell){ if(pos===s16&&m!==null&&realPour|| (pos===s16&&m!==null&&breath)){
+          if(!(x<.4&&ln<2)){ const mm=wK(wDeg(m)), vv=.55+.85*x; wLeadV(mm,when,ln*e8,SN,peakNow,vv);
+            if(x>.6) wPluck(mm+24,when,ln*e8,.025*x);
+            if(x>.5&&ln>=2){ const nx=wK(wDeg(m+1)); if(W.bright) wPluck(nx,when+(ln-1)*e8,e8,.08); else wPiano(nx,when+(ln-1)*e8,e8,.11); } } }
+        pos+=ln*2; } } }
+    if(realPour&&RX.x>.45&&phase!=='build'){ const ar=ch.slice(1)[[0,1,2,3,2,1][s16%6]]+24; wPluck(ar,when,TICK*.9,.07*(RX.x-.3)); }
+    if(realPour&&s16%2===0) wPings(when,tD,f);
     const kickOn = SN===2 ? (s16===0||s16===8) : (phase==='build' ? false : phase==='peak' ? (s16%4===0) : phase==='land' ? (s16===0 || (s16===8 && (tick-W.peakTick)<96)) : (s16===0||s16===8||(s16===14&&tier>=1)));
-    if(kickOn) tKick(when,true);
-    if(SN===2){ if(b>=1&&s16===12) clap(when,.22); if(s16%4===2) tHat(when,.06,false); if(s16%4===2) wBass(root+12,when,e8*.9,.16); }
+    if(kickOn) tKick(when,true,1-Math.min(.9,.85*(.3+1.1*RX.x)));
+    if(SN===2){ if(b>=1&&s16===12) clap(when,.22); { const x=RX.x, on=x>.6?true:x>.3?s16%2===1:s16%4===2; if(on) tHat(when,.06*(.4+1.3*x),false); } if(s16%4===2) wBass(root+12,when,e8*.9,.16); }
     else {
       if(phase!=='build'){ if(s16===4||s16===12) clap(when,phase==='peak'?.32:.26); if(s16%4===2) tHat(when,.08,true);
-        if(phase!=='land'||(tick-W.peakTick)<80){ if(tier>=1||phase==='peak') tHat(when,.035,false); }
+        if(phase!=='land'||(tick-W.peakTick)<80){ const x=RX.x, on=phase==='peak'||(x>.6?true:x>.3?s16%2===1:false); if(on) tHat(when,.035*(.4+1.3*x),false); }
         if(s16%2===0&&(phase!=='land'||(tick-W.peakTick)<88)) wBass(root+12*((s16/2)%2),when,e8*.9,.17); }
       else { const cl=Math.max(0,Math.min(1,(w-DK.p0)/Math.max(1,DK.pk-DK.p0))), iv=cl<.4?4:cl<.75?2:1;
         if(tick%iv===0) noiseHit(when,'bandpass',1900+cl*900,.8,.05+.15*cl,.07,T.duck);
@@ -1707,7 +1755,7 @@ function frame(ts,id){ if(!playing||id!==loopId)return;
   if(liveRunning){dt=Math.max(0,(performance.now()-live.t0)/1000-t);}
   const sub=Math.ceil(dt/.05);for(let i=0;i<sub;i++){t+=dt/sub;if(t>=data.dur){t=data.dur;break;}step(dt/sub);}
   while(nextTickD<=t){onTick(ctx.currentTime+.02,nextTickD);nextTickD=Math.round((nextTickD+TICK)*1000)/1000;}
-  render();hud();
+  wReact(t); render();hud();
   if(t>=data.dur){setPlaying(false);return;} requestAnimationFrame(ts2=>frame(ts2,id));}
 async function wake(){
   if(!ctx){initAudio();setDrone();}
