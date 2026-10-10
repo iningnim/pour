@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.8</title>
+<title>一杯咖啡的样子 v4.9</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -149,7 +149,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.8</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.9</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -280,7 +280,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.8</summary>
+    <summary>版本说明 · v4.9</summary>
+    <h2>v4.9</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>清零同时归零时间</b>：点"清零"或"准备"时，依次发送 清零重量 → 停止计时 → 计时归零，状态栏分别显示重量和时间是否归零；没在冲煮或试听时，网页上的读数也回到 0。</li>
+      <li>音乐、界面与 v4.8 相同。</li>
+    </ul>
     <h2>v4.8</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1774,6 +1780,9 @@ function bkModes(){ const p=BLE.cmd&&BLE.cmd.properties||{}, o=[]; if(BLE.mode) 
 const bkSleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function bkWait(pred,ms){ const t0=performance.now(); while(performance.now()-t0<ms){ if(pred()) return true; await bkSleep(60);} return pred(); }
 function bkVerifyTare(){ return ()=>bkWait(()=>BLE.last&&Math.abs(BLE.last.g)<0.4,1300); }
+function bkVerifyTimerZero(){ return ()=>bkWait(()=>BLE.last&&BLE.last.ms<400,1300); }
+async function bkTareAll(){ const ok=await sendCmd(0x01,0,0,bkVerifyTare()); await sendCmd(0x05); const okT=await sendCmd(0x06,0,0,bkVerifyTimerZero()); if(!liveRunning&&!playing){ restart(); } return {ok,okT}; }
+function bkTareMsg(r){ return (r.ok?'重量已清零':'重量没清零')+'，'+(r.okT?'时间已归零':'时间没归零'); }
 function bkVerifyTimer(){ const ms0=BLE.last?BLE.last.ms:0, pk0=BLE.pk; return ()=>bkWait(()=>BLE.last&&BLE.pk>pk0&&BLE.last.ms>ms0+150,1500); }
 const BK_NAMES={1:'清零',4:'开始计时',5:'停止计时',6:'计时归零',7:'清零并计时',8:'流速平滑'};
 async function sendCmd(c,d1=0,d2=0,verify){
@@ -1854,7 +1863,7 @@ async function connectScale(){
   }
 }
 const ARM={on:false,t0:0,hits:0}; let START_MODE='auto';
-async function armBrew(){ await wake(); status('正在清零…',5000); const ok=await sendCmd(0x01,0,0,bkVerifyTare()); ARM.on=true; ARM.t0=performance.now(); ARM.hits=0; ARM.msg=ok?'已清零':'秤没响应清零（已试两种写入方式）'; btnStart.textContent='重新准备'; status(ARM.msg+'，等待注水…',5000); }
+async function armBrew(){ await wake(); status('正在清零…',5000); const r=await bkTareAll(); ARM.on=true; ARM.t0=performance.now(); ARM.hits=0; ARM.msg=bkTareMsg(r); btnStart.textContent='重新准备'; status(ARM.msg+'，等待注水…',5000); }
 async function startBrew(opts){
   await wake(); ARM.on=false;
   const tmr=opts&&opts.noTare?0x04:0x07; sendCmd(tmr,0,0,bkVerifyTimer()).then(async ok=>{ if(!ok&&tmr===0x04) ok=await sendCmd(0x07,0,0,bkVerifyTimer()); if(liveRunning) status(ok?'冲煮中 · 秤计时已开始':'冲煮中 · 秤计时没响应（网页照常计时）'); });
@@ -1885,7 +1894,7 @@ function exportCsv(){
 window.addEventListener('error',e=>{try{status('页面出错：'+e.message);}catch(_){}});
 window.addEventListener('unhandledrejection',e=>{try{status('页面出错：'+(e.reason&&e.reason.message||e.reason));}catch(_){}});
 btnConn.addEventListener('click',()=>{showAll=false;status('正在打开蓝牙列表…');connectScale();});document.getElementById('bleAll').addEventListener('click',()=>{showAll=true;connectScale();}); btnStart.addEventListener('click',()=>{ if(START_MODE==='auto') armBrew(); else startBrew(); });
-document.getElementById('bleTare').addEventListener('click',async()=>{ status('正在清零…',5000); const ok=await sendCmd(0x01,0,0,bkVerifyTare()); if(ARM.on){ARM.t0=performance.now();ARM.hits=0;ARM.msg=ok?'已清零':'秤没响应清零';} status((ok?'清零成功':'秤没响应清零（已试两种写入方式）。可在“秤的高级选项 → 原始数据”截图给我')+(ARM.on?'，继续等待注水…':'。'),5000); });
+document.getElementById('bleTare').addEventListener('click',async()=>{ status('正在清零…',5000); const r=await bkTareAll(); if(ARM.on){ARM.t0=performance.now();ARM.hits=0;ARM.msg=bkTareMsg(r);} status(bkTareMsg(r)+(ARM.on?'，继续等待注水…':'。'),5000); });
 group('startMode','m',m=>{ START_MODE=m; ARM.on=false; btnStart.textContent=m==='auto'?'准备':'开始'; }); btnEnd.addEventListener('click',endBrew); btnCsv.addEventListener('click',exportCsv);
 smoothChk.addEventListener('change',()=>sendCmd(0x08,smoothChk.checked?1:0));
 
