@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.2</title>
+<title>一杯咖啡的样子 v4.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -145,7 +145,7 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.2</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.3</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -272,7 +272,14 @@ body.running .settings,body.running .notes,body.running .foot,body.running .scal
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.2</summary>
+    <summary>版本说明 · v4.3</summary>
+    <h2>v4.3</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>iPhone（Bluefy）连接修正</b>：点"连接秤"直接弹出蓝牙列表，不再先查询蓝牙状态（Bluefy 可能不回应这个查询，导致点了没反应）。</li>
+      <li><b>点下去马上有提示</b>：状态栏立刻显示"正在打开蓝牙列表…"；任何错误都会写在状态栏。</li>
+      <li>音乐、界面与 v4.2 相同。</li>
+    </ul>
     <h2>v4.2</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1739,8 +1746,7 @@ let showAll=false;
 async function connectScale(){
   if(!navigator.bluetooth){ status(/iPhone|iPad|iPod/.test(navigator.userAgent)?'iPhone 上的 Safari 和 Chrome 不支持网页蓝牙。请在 App Store 下载 Bluefy 浏览器，用它打开本页面。':'这个浏览器不支持网页蓝牙。请用安卓或电脑上的 Chrome 打开本页面。'); return; }
   try{
-    if(navigator.bluetooth.getAvailability){ const ok=await navigator.bluetooth.getAvailability(); if(!ok){status('电脑的蓝牙没有打开，或 Chrome 没有蓝牙权限。请打开蓝牙后刷新页面。');return;} }
-    status(showAll?'正在列出附近所有蓝牙设备…':'正在搜索秤…');
+    status(showAll?'正在打开蓝牙列表（所有设备）…':'正在打开蓝牙列表…');
     const opt=showAll?{acceptAllDevices:true,optionalServices:[0x0FFE]}
       :{filters:[{namePrefix:'BOOKOO'},{namePrefix:'Bookoo'},{namePrefix:'bookoo'},{namePrefix:'BK'},{services:[0x0FFE]}],optionalServices:[0x0FFE]};
     const dev=await navigator.bluetooth.requestDevice(opt);
@@ -1757,7 +1763,7 @@ async function connectScale(){
     if(e.name==='NotFoundError'){ status(showAll?'没有选择设备。':'列表里没有找到秤（或没有选择）。可以点“显示所有蓝牙设备”再试。'); document.getElementById('bleAll').hidden=false; }
     else if(e.name==='SecurityError') status('浏览器拒绝了蓝牙权限：'+e.message+'。请用 Chrome 打开下载的本地文件，不要在 Claude 里预览。');
     else if(e.name==='NetworkError') status('秤连接中断：'+e.message+'。请确认手机上的 Bookoo App 已断开或关闭，秤重新开机后再试。');
-    else status('连接失败（'+e.name+'）：'+e.message);
+    else status('连接失败（'+(e&&e.name||'错误')+'）：'+(e&&e.message||e)+'。请确认手机蓝牙已打开、Bluefy 有蓝牙权限，秤已开机且没有被 Bookoo App 占用。');
   }
 }
 const ARM={on:false,t0:0,hits:0}; let START_MODE='auto';
@@ -1788,7 +1794,9 @@ function exportCsv(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));
   a.download='pour-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
-btnConn.addEventListener('click',()=>{showAll=false;connectScale();});document.getElementById('bleAll').addEventListener('click',()=>{showAll=true;connectScale();}); btnStart.addEventListener('click',()=>{ if(START_MODE==='auto') armBrew(); else startBrew(); });
+window.addEventListener('error',e=>{try{status('页面出错：'+e.message);}catch(_){}});
+window.addEventListener('unhandledrejection',e=>{try{status('页面出错：'+(e.reason&&e.reason.message||e.reason));}catch(_){}});
+btnConn.addEventListener('click',()=>{showAll=false;status('正在打开蓝牙列表…');connectScale();});document.getElementById('bleAll').addEventListener('click',()=>{showAll=true;connectScale();}); btnStart.addEventListener('click',()=>{ if(START_MODE==='auto') armBrew(); else startBrew(); });
 document.getElementById('bleTare').addEventListener('click',async()=>{ await sendCmd(0x01); if(ARM.on){ARM.t0=performance.now();ARM.hits=0;} status('已清零'+(ARM.on?'，继续等待注水…':'。')); });
 group('startMode','m',m=>{ START_MODE=m; ARM.on=false; btnStart.textContent=m==='auto'?'准备（注水自动开始）':'开始冲煮'; }); btnEnd.addEventListener('click',endBrew); btnCsv.addEventListener('click',exportCsv);
 smoothChk.addEventListener('change',()=>sendCmd(0x08,smoothChk.checked?1:0));
