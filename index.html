@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v4.11</title>
+<title>一杯咖啡的样子 v4.12</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -89,6 +89,15 @@ body.running .stamp{opacity:0}
 .grid4 button:disabled{opacity:.35;cursor:default}
 .seg.two{display:grid;grid-template-columns:1fr 1fr}
 .seg.two button{text-align:center}
+.mpad{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px}
+.mpad>*{max-width:520px;width:100%;margin:0 auto}
+.mrow{display:flex;align-items:center;gap:12px}
+.mrow b{font-size:.85rem;color:var(--muted);letter-spacing:.1em}
+.mrow output{font-family:var(--mono);font-size:1.1rem;color:var(--crema);min-width:5.5em;font-variant-numeric:tabular-nums}
+.mrow .chk{margin-left:auto}
+#mFlow{height:44px;accent-color:var(--crema);touch-action:none}
+.mscale{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--mono)}
+body.manual main{padding-bottom:170px}
 .fold{font-size:.72rem;color:var(--muted);text-align:center;letter-spacing:.1em;padding-top:4px}
 .scale h2,.drawer summary b{font-size:.78rem;font-weight:600;letter-spacing:.16em;color:var(--muted);margin:0}
 .scale .main{display:flex;flex-wrap:wrap;gap:8px}
@@ -149,7 +158,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v4.11</b> · <span id="verGenre">旋律电子</span></span>
+    <span class="ver"><b>v4.12</b> · <span id="verGenre">旋律电子</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -193,12 +202,21 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <div class="transport">
     <button class="play" id="play">播放</button>
     <button class="ghost" id="again" aria-label="从头播放">从头</button>
-    <small>没连秤时试听预设</small>
+    <button class="ghost" id="manualBtn">手动模拟注水</button>
+    <small>没连秤时试听</small>
     <div class="seg mini" id="speeds">
       <button data-s="1" aria-pressed="true">1×</button>
       <button data-s="2" aria-pressed="false">2×</button>
       <button data-s="4" aria-pressed="false">4×</button>
     </div>
+  </div>
+
+  <div class="mpad" id="manualPad" hidden>
+    <div class="mrow"><b>手动注水</b><output id="mVal">0.0 g/s</output>
+      <label class="chk"><input type="checkbox" id="mRelease" checked> 松手归零</label>
+      <button class="ghost" id="mEnd">结束</button></div>
+    <input type="range" id="mFlow" min="0" max="8" step="0.1" value="0" aria-label="模拟流速">
+    <div class="mscale"><span>0 停</span><span>2 慢</span><span>4</span><span>6 快</span><span>8 g/s</span></div>
   </div>
 
   <section class="settings" aria-label="设置">
@@ -280,7 +298,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v4.11</summary>
+    <summary>版本说明 · v4.12</summary>
+    <h2>v4.12</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>手动模拟注水（测试用）</b>：点"手动模拟注水"，屏幕底部出现滑杆（0–8 g/s）。按住拖动就是注水，位置就是流速，重量按流速累加；默认"松手归零"＝松手就是停手（可关掉，让滑杆停在原位）。走的是和真秤完全相同的流程：换段、顶点、一声锣、"这一杯"卡片。不需要连秤，也不会给秤发命令。</li>
+      <li>音乐与 v4.11 相同。</li>
+    </ul>
     <h2>v4.11</h2>
     <h3>本版重点（旋律电子）</h3>
     <ul>
@@ -1870,8 +1894,12 @@ function onPacket(b){
     if(now-ARM.t0>1000){ if(p.g>=2&&p.fl>=.4){ ARM.hits++; if(ARM.hits>=2){ ARM.on=false; startBrew({noTare:true}); return; } } else ARM.hits=0; }
     if(now>BLE.hold) status((ARM.msg||'')+'，等待注水… 读数 '+p.g.toFixed(1)+' g'); return; }
   if(!liveRunning){ if(now>BLE.hold) status('已连接 '+(BLE.dev&&BLE.dev.name||'Bookoo')+'，'+p.g.toFixed(1)+' g，电量 '+p.batt+'%'); return; }
-  const tn=(now-live.t0)/1000, i=Math.max(0,Math.round(tn/DT)), w=Math.max(0,p.g);
-  live.ef+=(Math.max(0,p.fl)-live.ef)*.5;        // light smoothing on our side (~11 packets/s)
+  if(live&&live.manual) return;
+  liveFeed(p.g,p.fl,now);
+}
+function liveFeed(g,fl,now){
+  const tn=(now-live.t0)/1000, i=Math.max(0,Math.round(tn/DT)), w=Math.max(0,g);
+  live.ef+=(Math.max(0,fl)-live.ef)*.5;        // light smoothing on our side (~11 packets/s)
   if(i>live.filled){ const span=i-live.filled;
     for(let k=1;k<=span;k++){const a=k/span; live.flow[live.filled+k]=live.lastF+(live.ef-live.lastF)*a; live.weight[live.filled+k]=live.lastW+(w-live.lastW)*a;}
     live.filled=i; }
@@ -1921,16 +1949,17 @@ const ARM={on:false,t0:0,hits:0}; let START_MODE='auto';
 async function armBrew(){ await wake(); status('正在清零…',5000); const r=await bkTareAll(); ARM.on=true; ARM.t0=performance.now(); ARM.hits=0; ARM.msg=bkTareMsg(r); btnStart.textContent='重新准备'; status(ARM.msg+'，等待注水…',5000); }
 async function startBrew(opts){
   await wake(); ARM.on=false;
-  const tmr=opts&&opts.noTare?0x04:0x07; sendCmd(tmr,0,0,bkVerifyTimer()).then(async ok=>{ if(!ok&&tmr===0x04) ok=await sendCmd(0x07,0,0,bkVerifyTimer()); if(liveRunning) status(ok?'冲煮中 · 秤计时已开始':'冲煮中 · 秤计时没响应（网页照常计时）'); });
-  live={t0:performance.now(),flow:[0],weight:[0],filled:0,lastF:0,lastW:0,ef:0};
+  const manual=!!(opts&&opts.manual);
+  if(!manual){ const tmr=opts&&opts.noTare?0x04:0x07; sendCmd(tmr,0,0,bkVerifyTimer()).then(async ok=>{ if(!ok&&tmr===0x04) ok=await sendCmd(0x07,0,0,bkVerifyTimer()); if(liveRunning) status(ok?'冲煮中 · 秤计时已开始':'冲煮中 · 秤计时没响应（网页照常计时）'); }); }
+  live={t0:performance.now(),flow:[0],weight:[0],filled:0,lastF:0,lastW:0,ef:0,manual};
   data={flow:live.flow,weight:live.weight,dur:1e9,total:250};
   setPlaying(false); restart(); lastPourEnd=Infinity; liveRunning=true; speed=1;
   btnStart.disabled=true; btnEnd.disabled=false; playBtn.disabled=true; document.getElementById('again').disabled=true;
-  status(opts&&opts.noTare?'检测到注水，已自动开始。':'冲煮中。已去皮并开始计时，开始注水吧。'); setPlaying(true);
+  status(manual?'手动模拟中：按住并拖动下方滑杆就是注水，松手就是停手。':opts&&opts.noTare?'检测到注水，已自动开始。':'冲煮中。已去皮并开始计时，开始注水吧。'); setPlaying(true);
 }
 function endBrew(force){
   if(!liveRunning) return;
-  if(!force&&STYLE==='techno'&&!X.ended){playEnding(t,live.lastW);setTimeout(()=>endBrew(true),isDK()?6500:6500);btnEnd.disabled=true;return;} liveRunning=false; sendCmd(0x05);
+  if(!force&&STYLE==='techno'&&!X.ended){playEnding(t,live.lastW);setTimeout(()=>endBrew(true),isDK()?6500:6500);btnEnd.disabled=true;document.getElementById('mEnd').disabled=true;return;} liveRunning=false; if(!live.manual) sendCmd(0x05); manStop();
   const n=live.filled+1, rec={flow:Float64Array.from(live.flow.slice(0,n)),weight:Float64Array.from(live.weight.slice(0,n)),dur:Math.max(1,(n-1)*DT),total:Math.max(1,live.lastW)};
   PRESETS.mine=rec; data=rec; setPlaying(false); t=rec.dur; calcLast(); render(); hud();
   let b=document.querySelector('#presets button[data-p="mine"]');
@@ -1940,6 +1969,16 @@ function endBrew(force){
   playBtn.textContent='重来';
   status((X.summary?X.summary+'。':'')+'这一杯结束：'+Math.round(rec.total)+' g，用时 '+Math.floor(rec.dur/60)+':'+String(Math.floor(rec.dur%60)).padStart(2,'0')+'。可以按"重来"回放，或导出数据。');
 }
+const MAN={iv:null,w:0,last:0}; const mPad=document.getElementById('manualPad'), mFlow=document.getElementById('mFlow'), mVal=document.getElementById('mVal');
+function mShow(){ mVal.textContent=(+mFlow.value).toFixed(1)+' g/s'; }
+async function manStart(){ if(liveRunning) return; await startBrew({manual:true}); MAN.w=0; MAN.last=performance.now(); mFlow.value=0; mShow();
+  mPad.hidden=false; document.body.classList.add('manual'); document.getElementById('mEnd').disabled=false; window.scrollTo({top:0});
+  MAN.iv=setInterval(()=>{ if(!liveRunning){manStop();return;} const now=performance.now(), dt=Math.min(.3,(now-MAN.last)/1000); MAN.last=now; const f=+mFlow.value; MAN.w+=f*dt; liveFeed(MAN.w,f,now); },90); }
+function manStop(){ if(MAN.iv){clearInterval(MAN.iv);MAN.iv=null;} mPad.hidden=true; document.body.classList.remove('manual'); }
+document.getElementById('manualBtn').addEventListener('click',manStart);
+document.getElementById('mEnd').addEventListener('click',()=>endBrew());
+mFlow.addEventListener('input',mShow);
+['pointerup','pointercancel','touchend','mouseup'].forEach(ev=>mFlow.addEventListener(ev,()=>{ if(document.getElementById('mRelease').checked){ mFlow.value=0; mShow(); } }));
 function exportCsv(){
   const r=PRESETS.mine; if(!r) return; let out='time_s,weight_g,flow_gps\n';
   for(let i=0;i<r.flow.length;i++) out+=(i*DT).toFixed(1)+','+r.weight[i].toFixed(2)+','+r.flow[i].toFixed(2)+'\n';
