@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.9</title>
+<title>一杯咖啡的样子 v5.10</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -176,7 +176,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.9</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.10</b> · <span id="verGenre">好听版</span></span>
   </header>
   <div class="seg three" id="soundPick" role="group" aria-label="声音">
     <button data-g="v5" aria-pressed="true">好听版</button>
@@ -325,7 +325,12 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.9</summary>
+    <summary>版本说明 · v5.10</summary>
+    <h2>v5.10</h2>
+    <ul>
+      <li><b>第三段第一拍不再打架</b>（好听版）：去掉入口叠在一起的 6 声金属锣（FM 合成，泛音不在音阶上）和两个往下滑的低频；改成一声和谐的钵声，音高跟第一小节真实的和弦走（根音 + 五度），低频冲击固定在这个根音上。冲击噪声、镲片和灯光爆亮保留。</li>
+      <li>第一段、第二段的入口提示锣也换成同样的钵声（只敲一声，跟当下和弦）。</li>
+    </ul>
     <h2>v5.9</h2>
     <ul>
       <li><b>和声不再打架</b>（好听版）：B♭、E♭ 改成不带 D 的挂留/加九和弦，Cm、A♭ 去掉贴近旋律的九度；和弦都放在旋律下面；两条副旋律改成按音阶走（旋律下方两级的和弦音）；琶音只弹和弦音并放到旋律上方；合唱只唱根音、五度、七度。焖蒸、等待、段内停顿、第三段和结尾的主和弦都按这套规则。</li>
@@ -1511,7 +1516,7 @@ function darkOutroStart(tD,w){
   const avg=X.pourTime>0?w/X.pourTime:0;
   const sum='总水量 '+Math.round(w)+' g · 用时 '+ts+' · 注水平均 '+avg.toFixed(1)+' g/s'+(isW()?' · '+W.bpm+' BPM · '+W_KEYS[W.key]+' · '+(W.prog||W_PROGS[0]).map(wTr).join('–'):' · 动机 '+DK.motif.map(dkName).join(' '));
   X.summary=sum; X.hold=tD+3; noteEl.textContent='终';
-  explain(ts+'　终：音乐收拢到主和弦，一声锣，余音约 6 秒。'+sum);
+  explain(ts+'　终：音乐收拢到主和弦，一声钵，余音约 6 秒。'+sum);
   if(typeof status==='function'&&liveRunning) status('终 · '+sum);
 }
 function darkOutroTick(when,tD){ /* the final hit rings out by itself; nothing else plays */ }
@@ -1982,6 +1987,19 @@ const W_SAFE={Cm:{bass:48,pad:[55,58,60,63],top:[67,70,72],choir:[60,67,70],pcs:
               Ab:{bass:44,pad:[56,60,63,67],top:[72,75],choir:[56,63,67],pcs:[8,0,3,7]},
               Bb:{bass:46,pad:[53,58,60,65],top:[70,72,77],choir:[58,65,72],pcs:[10,0,5]},        // B♭ sus2
               Eb:{bass:51,pad:[55,58,63,65],top:[67,70,75],choir:[63,70,75],pcs:[3,7,10,5]}};      // E♭ add9, no D
+/* ---- v5.10: section entries without clashing metal — a harmonic bell on the bar's own chord, a fixed-pitch sub on its root ---- */
+function v5HBell(m,when,v,dec){ const f=mtoh(m), out=ctx.createGain(); out.gain.value=1;
+  [[1,1,1],[2,.3,.6],[3,.12,.4],[4.02,.05,.25]].forEach(([r,a,dk])=>[0,1.2].forEach(bt=>{
+    const o=ctx.createOscillator(),g=ctx.createGain(); o.type='sine'; o.frequency.value=f*r+bt;
+    g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(.5*a*v,when+.012); g.gain.setTargetAtTime(0,when+.02,dec*dk/3.5);
+    o.connect(g); g.connect(out); o.start(when); o.stop(when+dec*dk+1); }));
+  dkOut(out,false); }
+function v5RootSub(m,when,v){ const o=ctx.createOscillator(),sh=ctx.createWaveShaper(),g=ctx.createGain(); o.type='sine'; o.frequency.value=mtoh(m);
+  const c=new Float32Array(256); for(let i=0;i<256;i++){const x=i/128-1; c[i]=Math.tanh(1.6*x);} sh.curve=c;
+  g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.005); g.gain.setTargetAtTime(0,when+.01,.45);
+  o.connect(sh); sh.connect(g); g.connect(MASTER); o.start(when); o.stop(when+2.2); }
+function v5Drop(when,b){ lightAt(when,()=>LIGHT.burst()); noiseHit(when,'highpass',4500,.5,.22,1.8);
+  const r=wSafe(b).bass; v5RootSub(r-12,when,.5); v5HBell(r+12,when,.32,4.5); v5HBell(r+19,when,.16,3.5); }
 function wSafe(b){ const pr=W.prog||W_PROGS[0], s=W_SAFE[pr[((b%4)+4)%4]], k=m=>wK(m);
   return {bass:k(s.bass),pad:s.pad.map(k),top:s.top.map(k),choir:s.choir.map(k),pcs:s.pcs}; }
 function v5Counter(m,b,extra){ // scale-true counter-line: 2 scale steps below the tune, nudged down to a chord tone
@@ -2019,7 +2037,7 @@ function v5Tick(when,tD,o){
     W.peaked=true;W.gap=false;W.peakTick=tick; T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     MASTER.gain.cancelScheduledValues(when);MASTER.gain.setValueAtTime(Math.min(1.4,SECVOL[3]*1.35),when);
-    dropHit(when); [0,7,12].forEach(k=>mang(wK(48)+k,when,.28,5)); subDrop(when);
+    v5Drop(when,b);
     DK.title='顶点';DK.titleT=tD;flashCol='255,215,120';flashV=1.6;X.hold=tD+2; explain(ts+'　第三段一进来就是顶点：'+Math.round(w)+' g'); }
   if(s16!==0) return;            // everything below is laid out once per bar, on the downbeat
   if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(S3?.5:.3,when,.5);   // a shorter room for the groove, bigger for the drop
@@ -2141,7 +2159,7 @@ function onTickWalker(when,tD){
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     MASTER.gain.cancelScheduledValues(when);MASTER.gain.setTargetAtTime(SECVOL[SN],when,SN===1?.3:.05);
     if(SN===3){const fl=Math.max(2.5,Math.min(6,X.center)); DK.pk=TARGET-Math.max(30,Math.min(65,fl*13)); DK.p0=DK.pk-fl*10; if(DK.p0<w+4) DK.p0=w+4; if(DK.pk<DK.p0+8) DK.pk=Math.min(TARGET-8,DK.p0+8);}
-    for(let i=0;i<SN;i++) mang(wK(48),when+i*.5,.22,4);
+    if(GENRE==='v5'){ if(SN<3){ const r=wSafe(Math.floor(Math.max(0,tick)/16)).bass; v5HBell(r+12,when,SN===1?.12:.16,4.5); v5HBell(r+19,when,SN===1?.05:.07,3.5); } } else for(let i=0;i<SN;i++) mang(wK(48),when+i*.5,.22,4);
     DK.title=sect().name.split(' · ')[1]; DK.titleT=tD; flashCol=['','140,200,255','235,240,255','255,190,110'][SN];
     X.hold=tD+1.5; explain(ts+'　'+sect().name+'：'+sect().desc);
   } else if(tier!==X.tier){ X.tier=tier; }
