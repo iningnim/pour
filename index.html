@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.7</title>
+<title>一杯咖啡的样子 v5.8</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -176,7 +176,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.7</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.8</b> · <span id="verGenre">好听版</span></span>
   </header>
   <div class="seg three" id="soundPick" role="group" aria-label="声音">
     <button data-g="v5" aria-pressed="true">好听版</button>
@@ -325,7 +325,9 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.7</summary>
+    <summary>版本说明 · v5.8</summary>
+    <h2>v5.8</h2>
+    <ul><li><b>结尾自然收拢</b>（三种声音都适用）：停手 0.6 秒后，鼓和律动约 1 秒内退下、滤波合上；和声落到这一杯的主和弦（如 Am9），最后一个长音落在主音；锣与主和弦同一刻响起，混响和回声保留，约 6 秒一起淡到全无；灯光同步成一团暖光慢慢熄灭。不再整首一刀切、先静音。</li></ul>
     <h2>v5.7</h2>
     <ul><li><b>心跳改回合成</b>：不再用录音，改为照录音的特点合成的"咚—咚"（85–130 Hz 的紧实一下，0.33 秒后第二下约八成力度），每两拍一组，等待一开始就有；灯光仍跟着它闪。</li></ul>
     <h2>v5.6 · 灯光</h2>
@@ -1171,7 +1173,7 @@ function tDown(when){const o=ctx.createOscillator(),g=ctx.createGain(),fl=ctx.cr
 function playEnding(tD,w){
   if(X.ended||!ctx) return; X.ended=true; technoSetup();
   if(isDK()){ darkOutroStart(tD,w); return; }
-  if(liveRunning&&!playEnding.manual) setTimeout(()=>endBrew(true),isDK()?6500:6500);
+  if(liveRunning&&!playEnding.manual) setTimeout(()=>endBrew(true),isDK()?7200:6500);
   const c=ctx.currentTime+.05, diff=w-TARGET, ok=Math.abs(diff)<=6, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
   [T.rsG.gain,T.uwG.gain,T.uwF.frequency].forEach(p=>p.cancelScheduledValues(c));
   T.rsG.gain.setValueAtTime(0,c);
@@ -1461,19 +1463,33 @@ function dkPhraseNote(local,f,SN,tier,tD,when){
 }
 function darkOutroStart(tD,w){
   const diff=w-TARGET, ok=diff>=-10.5&&diff<=10.5, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
-  const c=ctx.currentTime+.03, hit=c+.25; LV.kick=0; LV.rings=[]; lightAt(hit,()=>LIGHT.gong());
-  dkFx(); DK.fx.clearRev.gain.setValueAtTime(.06,c);
+  // a natural close: drums and the groove step back over ~1 s, the harmony lands on the cup's home chord,
+  // the gong strikes with that chord, and everything (chord, reverb, echoes, gong) fades together over ~6 s
+  const c=ctx.currentTime+.03, hit=c+.18; LV.kick=0; LV.rings=[]; lightAt(hit,()=>LIGHT.gong());
+  dkFx(); DK.fx.clearRev.gain.setValueAtTime(.25,c);
   [T.rsG.gain,T.uwG.gain,T.uwF.frequency,MASTER.gain].forEach(p=>p.cancelScheduledValues(c));
-  T.rsG.gain.setValueAtTime(0,c); T.uwG.gain.setValueAtTime(0,c);           // everything stops
-  // cut the tails too: long reverb + echoes of the melody would otherwise keep ringing for seconds
-  if(DK.fx.rw){ DK.fx.rw.gain.cancelScheduledValues(c); DK.fx.rw.gain.setTargetAtTime(0,c,.06); }
-  DK.fx.send.gain.cancelScheduledValues(c); DK.fx.send.gain.setValueAtTime(0,c);
-  if(T.rxG){ T.rxG.gain.cancelScheduledValues(c); T.rxG.gain.setValueAtTime(0,c); }
-  v5WaitStop(c); if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.03); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.03); if(W.lb){W.lb.gain.cancelScheduledValues(c);W.lb.gain.setTargetAtTime(0,c,.03);} wWaitPad&&W.waitPad&&wWaitPad(false,c);
+  T.rsG.gain.setTargetAtTime(0,c,.15);
+  T.uwG.gain.setValueAtTime(T.uwG.gain.value,c); T.uwG.gain.setTargetAtTime(0,c,.3);            // the groove recedes (≈1 s)
+  T.uwF.frequency.setValueAtTime(Math.min(20000,T.uwF.frequency.value||20000),c); T.uwF.frequency.exponentialRampToValueAtTime(400,c+1.2);
+  DK.fx.send.gain.cancelScheduledValues(c); DK.fx.send.gain.setTargetAtTime(0,hit,.4);           // no new echoes, old ones ring out
+  if(W.lb){W.lb.gain.cancelScheduledValues(c);W.lb.gain.setTargetAtTime(0,c,.3);}
+  v5WaitStop(c); if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.08); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.08); wWaitPad&&W.waitPad&&wWaitPad(false,c);
   MASTER.gain.setValueAtTime(Math.max(.75,SECVOL[3]),c);
-  if(DK.yn){ DK.yn.rainG.gain.setValueAtTime(0,c); DK.yn.drG.gain.setValueAtTime(0,c); }
-  const TRx=sect().tr, lowM=midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
-  const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP);   // the gong rings on its own (~5 s), no long reverb
+  if(DK.yn){ DK.yn.rainG.gain.setTargetAtTime(0,c,.3); DK.yn.drG.gain.setTargetAtTime(0,c,.3); }
+  const TRx=sect().tr, lowM=isW()?wK(48):midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
+  const home=isW()?W_CHV.Cm.map(wK):[lowM].concat(chordAt(0,TRx).slice(0,4));
+  const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP);
+  const ebr=ctx.createGain(); ebr.gain.value=.35; eb.connect(ebr); ebr.connect(DK.fx.rev);
+  { // the home chord: warm saw ensemble, filter slowly closing, fades over ~6 s
+    const fl=ctx.createBiquadFilter(), g=ctx.createGain(); fl.type='lowpass'; fl.Q.value=.5; fl.frequency.setValueAtTime(3200,hit); fl.frequency.exponentialRampToValueAtTime(260,hit+5.5);
+    g.gain.setValueAtTime(0,hit); g.gain.linearRampToValueAtTime(.11,hit+.08); g.gain.setTargetAtTime(0,hit+.6,1.6);
+    home.slice(1).forEach(m=>[-12,-4,4,12].forEach(d=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtoh(m); o.detune.value=d; const og=ctx.createGain(); og.gain.value=1/(4*home.length); o.connect(og); og.connect(fl); o.start(hit); o.stop(hit+7); }));
+    const sb=ctx.createOscillator(), sg=ctx.createGain(); sb.type='sine'; sb.frequency.value=mtoh(home[0]-12); sg.gain.setValueAtTime(0,hit); sg.gain.linearRampToValueAtTime(.18,hit+.02); sg.gain.setTargetAtTime(0,hit+.2,1.2); sb.connect(sg); sg.connect(eb); sb.start(hit); sb.stop(hit+7);
+    fl.connect(g); g.connect(eb);
+    // the melody's last word: the tonic, one long bell-like note
+    const tn=home[0]+24, bo=ctx.createOscillator(), bg=ctx.createGain(); bo.type='triangle'; bo.frequency.value=mtoh(tn);
+    bg.gain.setValueAtTime(0,hit); bg.gain.linearRampToValueAtTime(.09,hit+.005); bg.gain.setTargetAtTime(0,hit+.01,1.4); bo.connect(bg); bg.connect(eb); bo.start(hit); bo.stop(hit+7);
+    const b2=ctx.createOscillator(), b2g=ctx.createGain(); b2.type='sine'; b2.frequency.value=mtoh(tn+12); b2g.gain.setValueAtTime(0,hit); b2g.gain.linearRampToValueAtTime(.04,hit+.004); b2g.gain.setTargetAtTime(0,hit+.01,.8); b2.connect(b2g); b2g.connect(eb); b2.start(hit); b2.stop(hit+5); }
   // one gong, nothing else: crisp strike, rings and fades over ~5 s
   { const f0=mtoh(lowM-12), parts=[[1,1,5],[1.48,.55,4.2],[2.0,.5,4.6],[2.76,.35,3.4],[3.42,.22,2.6],[4.1,.14,1.8],[.5,.45,5]];
     parts.forEach(([r,a,dec],i)=>{const o=ctx.createOscillator(),g3=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f0*r*1.01,hit);o.frequency.exponentialRampToValueAtTime(f0*r,hit+.25);o.detune.value=i%2?4:-4;
@@ -1484,11 +1500,11 @@ function darkOutroStart(tD,w){
   DK.title='终'; DK.titleT=tD; DK.titleKeep=true; flashCol='255,235,190';
   setTimeout(()=>{flashV=1.8;},250);
   DK.outro={t0:tick,ok,startT:tD};
-  setTimeout(()=>{ if(DK.fx){ const n=ctx.currentTime; DK.fx.clearRev.gain.setValueAtTime(.25,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); DK.fx.send.gain.setValueAtTime(.5,n); } if(T&&T.rxG) T.rxG.gain.setValueAtTime(1,ctx.currentTime); },6000);
+  setTimeout(()=>{ if(DK.fx){ const n=ctx.currentTime; DK.fx.clearRev.gain.setValueAtTime(.25,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); DK.fx.send.gain.setValueAtTime(.5,n); } if(T&&T.rxG) T.rxG.gain.setValueAtTime(1,ctx.currentTime); },7200);
   const avg=X.pourTime>0?w/X.pourTime:0;
   const sum='总水量 '+Math.round(w)+' g · 用时 '+ts+' · 注水平均 '+avg.toFixed(1)+' g/s'+(isW()?' · '+W.bpm+' BPM · '+W_KEYS[W.key]+' · '+(W.prog||W_PROGS[0]).map(wTr).join('–'):' · 动机 '+DK.motif.map(dkName).join(' '));
   X.summary=sum; X.hold=tD+3; noteEl.textContent='终';
-  explain(ts+'　终：一声锣，余音约 5 秒。'+sum);
+  explain(ts+'　终：音乐收拢到主和弦，一声锣，余音约 6 秒。'+sum);
   if(typeof status==='function'&&liveRunning) status('终 · '+sum);
 }
 function darkOutroTick(when,tD){ /* the final hit rings out by itself; nothing else plays */ }
@@ -2440,7 +2456,7 @@ async function startBrew(opts){
 }
 function endBrew(force){
   if(!liveRunning) return;
-  if(!force&&STYLE==='techno'&&!X.ended){playEnding(t,live.lastW);setTimeout(()=>endBrew(true),isDK()?6500:6500);btnEnd.disabled=true;document.getElementById('mEnd').disabled=true;return;} liveRunning=false; if(!live.manual) sendCmd(0x05); manStop();
+  if(!force&&STYLE==='techno'&&!X.ended){playEnding(t,live.lastW);setTimeout(()=>endBrew(true),isDK()?7200:6500);btnEnd.disabled=true;document.getElementById('mEnd').disabled=true;return;} liveRunning=false; if(!live.manual) sendCmd(0x05); manStop();
   const n=live.filled+1, rec={flow:Float64Array.from(live.flow.slice(0,n)),weight:Float64Array.from(live.weight.slice(0,n)),dur:Math.max(1,(n-1)*DT),total:Math.max(1,live.lastW)};
   PRESETS.mine=rec; data=rec; setPlaying(false); t=rec.dur; calcLast(); render(); hud();
   let b=document.querySelector('#presets button[data-p="mine"]');
