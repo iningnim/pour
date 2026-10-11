@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.5</title>
+<title>一杯咖啡的样子 v5.6</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -42,7 +42,7 @@ h1{font-family:var(--serif);font-weight:700;font-size:1.15rem;letter-spacing:.04
   --glow:0;box-shadow:0 0 calc(18px + 60px*var(--glow)) calc(2px + 10px*var(--glow)) rgba(217,164,86,calc(.05 + .28*var(--glow)))}
 canvas{display:block;width:100%;height:100%;max-width:100%;border-radius:50%}
 .stamp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;
-  font-family:var(--serif);color:rgba(240,228,212,.86);font-size:1rem;letter-spacing:.3em;transition:opacity .6s}
+  font-family:var(--serif);color:rgba(240,228,212,.86);font-size:.9rem;letter-spacing:.2em;white-space:nowrap;transition:opacity .6s}
 .stamp small{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:rgba(240,228,212,.55);margin-top:6px}
 body.running .stamp{opacity:0}
 
@@ -88,7 +88,14 @@ body.running .stamp{opacity:0}
 .grid4 button.primary{background:var(--crema);border-color:var(--crema);color:var(--crema-ink);font-weight:600}
 .grid4 button:disabled{opacity:.35;cursor:default}
 .seg.two{display:grid;grid-template-columns:1fr 1fr}
-.seg.three{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg.three{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:6px}
+.seg .lightbtn{background:transparent;border-color:var(--crema);color:var(--crema)}
+#lightView{position:fixed;inset:0;z-index:60;background:#000;cursor:pointer}
+#lightView canvas{display:block;width:100%;height:100%}
+#strobeBtn{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:12px;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.35);color:rgba(255,255,255,.8);font-size:.75rem}
+.lhint{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:0;right:0;text-align:center;color:rgba(255,255,255,.45);font-size:.72rem;animation:lh 4s forwards}
+@keyframes lh{0%,60%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.lhint{animation:none}}
 .seg.three button{text-align:center;padding:9px 6px;font-size:.88rem}
 .seg.two button{text-align:center}
 .mpad{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px}
@@ -169,12 +176,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.5</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.6</b> · <span id="verGenre">好听版</span></span>
   </header>
   <div class="seg three" id="soundPick" role="group" aria-label="声音">
     <button data-g="v5" aria-pressed="true">好听版</button>
     <button data-g="walker" aria-pressed="false">跟手版</button>
     <button data-g="techno" aria-pressed="false">云南特色</button>
+    <button id="lightBtn" class="lightbtn" aria-label="全屏灯光">灯光</button>
   </div>
 
   <div class="stage" id="stage">
@@ -317,7 +325,13 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.5</summary>
+    <summary>版本说明 · v5.6</summary>
+    <h2>v5.6 · 灯光</h2>
+    <ul>
+      <li><b>全屏灯光</b>：第一屏"灯光"按钮，整个屏幕变成跟音乐走的灯；轻点退出，连秤和注水照常。手机朝上放在玻璃滤杯/分享壶下可以从下往上照亮咖啡；电脑可接投影。</li>
+      <li><b>灯光怎么走</b>：焖蒸琥珀色、每个旋律音亮一下；等待暗红色跟着心跳录音"咚—咚"；第二段青蓝色随底鼓律动、流速越快越亮，底鼓一下从中心推出一圈光；段内停顿压暗踏步；build 心跳红光 + 跟军鼓同步的白色频闪；第三段一进来金白爆亮，之后每小节多一种颜色在边缘流动；结尾全黑，锣声一道暖光约 5 秒熄灭。云南特色换成绿、土红、橙金。</li>
+      <li><b>安全</b>：频闪每秒最多 3 次，右上角可关掉。</li>
+    </ul>
     <h2>v5.5</h2>
     <ul><li>声音按钮改名：好听版 / 跟手版 / <b>云南特色</b>（原"暗黑 Techno"，雨林 → 山寨 → 火塘）。</li></ul>
     <h2>v5.4</h2>
@@ -594,6 +608,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     </details>
   </details>
 </main>
+<div id="lightView" hidden><canvas id="lc" aria-label="跟音乐变化的灯光"></canvas><button id="strobeBtn">频闪：开</button><div class="lhint">轻点屏幕退出 · 手机朝上放在滤杯下，从下往上照亮咖啡</div></div>
 <script>
 const DT=0.1, MAXF=8, THR=0.4;
 const SCALES={
@@ -662,10 +677,76 @@ function hbLoad(){ if(HB.buf||HB.loading||!ctx) return; HB.loading=true;
 function hbPlay(when,v){ // BC's own recorded lub-dub; the waiting music breathes with it
   if(!ctx) return; if(!HB.buf){ hbLoad(); return; }
   const t0=Math.max(ctx.currentTime,when-.05), src=ctx.createBufferSource(), g=ctx.createGain(); src.buffer=HB.buf; g.gain.value=1.1*(v||1);
-  src.connect(g); g.connect(COMP); src.start(t0);
+  src.connect(g); g.connect(COMP); src.start(t0); lightAt(when,()=>LIGHT.heart(1)); lightAt(when+.33,()=>LIGHT.heart(.75));
   if(T&&T.uwG){ const u=T.uwG.gain; u.cancelScheduledValues(when); u.setValueAtTime(u.value,when); u.linearRampToValueAtTime(.5,when+.03); u.setTargetAtTime(1,when+.06,.18);
     u.setValueAtTime(1,when+.33); u.linearRampToValueAtTime(.65,when+.36); u.setTargetAtTime(1,when+.39,.18); }
   if(W.air){ const a=W.air.g.gain; a.cancelScheduledValues(when); a.setValueAtTime(a.value,when); a.linearRampToValueAtTime(a.value*.4,when+.03); a.setTargetAtTime(W.air.lvl||.03,when+.06,.25); } }
+
+/* ================= 灯光：屏幕当灯，跟音乐走 ================= */
+const LV={on:false,kick:0,heart:0,flash:0,strobe:0,gong:0,burst:0,lastStrobe:0,rings:[],strobeOn:true,last:0,s3b:0};
+function lightAt(when,fn){ if(!LV.on||!ctx) return; const d=(when-ctx.currentTime)*1000; if(d<=8) fn(); else setTimeout(fn,d); }
+const LIGHT={
+  kick(v){ LV.kick=Math.min(1.2,LV.kick+.8*(v||1)); LV.rings.push({r:0,a:.55*(v||1)}); if(LV.rings.length>12) LV.rings.shift(); },
+  heart(v){ LV.heart=Math.max(LV.heart,v||1); },
+  flash(v){ LV.flash=Math.max(LV.flash,v||.4); },
+  strobe(v){ const n=performance.now(); if(!LV.strobeOn||n-LV.lastStrobe<334) return; LV.lastStrobe=n; LV.strobe=v||.7; },  // at most 3 per second
+  burst(){ LV.burst=1; LV.kick=1.2; },
+  gong(){ LV.gong=1; } };
+function lightMode(){
+  if(!playing&&!liveRunning) return 'idle';
+  if(X.ended||DK.outro) return 'end';
+  if(!inPhrase) return seg>=2?'build':'wait';
+  if(W.hold&&GENRE==='v5') return 'hold';
+  return 'S'+Math.max(1,Math.min(3,seg)); }
+function lightPal(mode){
+  const yn=GENRE==='techno';
+  const P={ idle:[255,150,60], S1:yn?[60,200,110]:[255,160,60], wait:[170,20,24], build:[170,20,24], hold:yn?[200,70,40]:[40,150,210],
+            S2:yn?[205,75,40]:[40,170,225], S3:yn?[255,150,40]:[255,215,150], end:[255,190,110] };
+  return P[mode]||P.idle; }
+const S3COLS=[[255,60,170],[60,230,255],[150,90,255],[255,130,40],[80,255,140]];
+function lightFrame(ts){
+  if(!LV.on) return; requestAnimationFrame(lightFrame);
+  const cv2=document.getElementById('lc'), g2=cv2.getContext('2d'), dpr=window.devicePixelRatio||1;
+  const Wd=Math.round(innerWidth*dpr), Hd=Math.round(innerHeight*dpr); if(cv2.width!==Wd||cv2.height!==Hd){cv2.width=Wd;cv2.height=Hd;}
+  const dt=LV.last?Math.min(.1,(ts-LV.last)/1000):.016; LV.last=ts;
+  LV.kick*=Math.exp(-dt/.18); LV.heart*=Math.exp(-dt/.28); LV.flash*=Math.exp(-dt/.14); LV.strobe*=Math.exp(-dt/.05); LV.gong*=Math.exp(-dt/1.7); LV.burst*=Math.exp(-dt/.6);
+  const mode=lightMode(), col=lightPal(mode), fl=Math.max(0,Math.min(1,((playing?sample(t).f:0)-1.5)/5));
+  let br;
+  switch(mode){
+    case 'idle': br=.12+.06*Math.sin(ts/900); break;
+    case 'S1': br=.22+.25*fl+.35*LV.flash; break;
+    case 'wait': br=.04+.75*LV.heart; break;
+    case 'build': br=.04+.6*LV.heart; break;
+    case 'hold': br=.1+.18*LV.kick; break;
+    case 'S2': br=.28+.35*fl+.35*LV.kick+.2*LV.flash; break;
+    case 'S3': br=.5+.25*fl+.4*LV.kick+.5*LV.burst; break;
+    case 'end': br=LV.gong; break; }
+  br=Math.max(0,Math.min(1.4,br));
+  const mn=Math.min(Wd,Hd), cx=Wd/2, cy=Hd/2;
+  g2.fillStyle='#000'; g2.fillRect(0,0,Wd,Hd);
+  // field
+  const c1=col.map(v=>Math.round(Math.min(255,v*br))), c0=col.map(v=>Math.round(v*br*.18));
+  let gr=g2.createRadialGradient(cx,cy,0,cx,cy,Math.hypot(cx,cy)); gr.addColorStop(0,'rgb('+c1+')'); gr.addColorStop(1,'rgb('+c0+')');
+  g2.fillStyle=gr; g2.fillRect(0,0,Wd,Hd);
+  // glow that breathes with the flow
+  if(mode!=='end'&&mode!=='idle'){ const R=mn*(.18+.32*fl)*(1+.18*LV.kick+.25*LV.heart);
+    gr=g2.createRadialGradient(cx,cy,0,cx,cy,R); gr.addColorStop(0,'rgba(255,250,235,'+(.25+.45*br).toFixed(3)+')'); gr.addColorStop(1,'rgba(255,250,235,0)');
+    g2.fillStyle=gr; g2.beginPath(); g2.arc(cx,cy,R,0,Math.PI*2); g2.fill(); }
+  // rings pushed out by the kick
+  LV.rings.forEach(o=>{ o.r+=dt*mn*1.1; o.a*=Math.exp(-dt/.45); }); LV.rings=LV.rings.filter(o=>o.a>.02);
+  LV.rings.forEach(o=>{ g2.strokeStyle='rgba('+col+','+o.a.toFixed(3)+')'; g2.lineWidth=mn*.02*(1+o.a); g2.beginPath(); g2.arc(cx,cy,o.r,0,Math.PI*2); g2.stroke(); });
+  // section 3: one more colour along the edges for every bar
+  if(mode==='S3'){ const k=Math.min(S3COLS.length,LV.s3b);
+    for(let i=0;i<k;i++){ const a=ts/1600*(i%2?-1:1)+i*2*Math.PI/Math.max(1,k), x=cx+Math.cos(a)*Wd*.42, y=cy+Math.sin(a)*Hd*.42, R=mn*(.3+.12*LV.kick);
+      gr=g2.createRadialGradient(x,y,0,x,y,R); gr.addColorStop(0,'rgba('+S3COLS[i]+','+(.35+.3*LV.kick).toFixed(3)+')'); gr.addColorStop(1,'rgba('+S3COLS[i]+',0)');
+      g2.fillStyle=gr; g2.fillRect(0,0,Wd,Hd); } }
+  // strobe (build) — capped at 3 per second, can be switched off
+  if(LV.strobe>.02&&LV.strobeOn){ g2.fillStyle='rgba(255,255,255,'+(LV.strobe*.8).toFixed(3)+')'; g2.fillRect(0,0,Wd,Hd); }
+  if(mode==='build'&&!LV.strobeOn){ g2.fillStyle='rgba(255,255,255,'+(.06*LV.heart).toFixed(3)+')'; g2.fillRect(0,0,Wd,Hd); }
+}
+function lightOpen(){ LV.on=true; const v=document.getElementById('lightView'); v.hidden=false; LV.last=0;
+  try{ if(v.requestFullscreen) v.requestFullscreen().catch(()=>{}); }catch(e){} keepAwake(true); requestAnimationFrame(lightFrame); }
+function lightClose(){ LV.on=false; document.getElementById('lightView').hidden=true; try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){} if(!playing) keepAwake(false); }
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   const master=ctx.createGain();MASTER=master;master.gain.value=.9;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.knee.value=12;comp.attack.value=.01;comp.release.value=.2;
@@ -834,7 +915,7 @@ function kickDuck(when,v){
 }
 function clap(when,v){[0,.012,.026].forEach((o,i)=>noiseHit(when+o,'bandpass',1500,.9,v*(i===2?1:.6),i===2?.18:.03));}
 function hat(when,v,open){noiseHit(when,'highpass',8000,.7,v,open?.32:.045);}
-function dropHit(when){
+function dropHit(when){ lightAt(when,()=>LIGHT.burst());
   noiseHit(when,'highpass',4500,.5,.22,1.8);
   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(62,when);o.frequency.exponentialRampToValueAtTime(31,when+1.3);
   g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(.55,when+.01);g.gain.exponentialRampToValueAtTime(.0001,when+1.6);o.connect(g);g.connect(MASTER);o.start(when);o.stop(when+1.7);
@@ -1131,7 +1212,7 @@ function technoSetup(){
   T.dl=ctx.createDelay(1);T.dl.delayTime.value=.346;const fb=ctx.createGain();fb.gain.value=.45;T.dl.connect(fb);fb.connect(T.dl);
   const dw=ctx.createGain();dw.gain.value=.32;T.dl.connect(dw);dw.connect(MASTER);
 }
-function tKick(when,quiet,floor,vol){ const kv=vol===undefined?1:vol;
+function tKick(when,quiet,floor,vol){ const kv=vol===undefined?1:vol; lightAt(when,()=>LIGHT.kick(Math.min(1,kv)));
   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(170,when);o.frequency.exponentialRampToValueAtTime(42,when+.08);
   g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(kv,when+.003);g.gain.setValueAtTime(kv,when+.06);g.gain.exponentialRampToValueAtTime(.0001,when+.42);
   o.connect(g);g.connect(T.kickBus);o.start(when);o.stop(when+.45);if(!quiet)flashV=1;
@@ -1376,7 +1457,7 @@ function dkPhraseNote(local,f,SN,tier,tD,when){
 }
 function darkOutroStart(tD,w){
   const diff=w-TARGET, ok=diff>=-10.5&&diff<=10.5, ts=Math.floor(tD/60)+':'+String(Math.floor(tD%60)).padStart(2,'0');
-  const c=ctx.currentTime+.03, hit=c+.25;
+  const c=ctx.currentTime+.03, hit=c+.25; LV.kick=0; LV.rings=[]; lightAt(hit,()=>LIGHT.gong());
   dkFx(); DK.fx.clearRev.gain.setValueAtTime(.06,c);
   [T.rsG.gain,T.uwG.gain,T.uwF.frequency,MASTER.gain].forEach(p=>p.cancelScheduledValues(c));
   T.rsG.gain.setValueAtTime(0,c); T.uwG.gain.setValueAtTime(0,c);           // everything stops
@@ -1734,7 +1815,7 @@ const RX={x:0,f:0,gate:0,lastT:null,neutral:true}; let VOICEVOL=1;
 function lv(a){ return Math.max(0,Math.min(1,(RX.f-a)/.25)); }
 function wLayer(){ const F=RX.f; return F<2.25?1:Math.min(seg===2?12:17,2+Math.floor((F-2.25)/.25)); }
 function wKick(when,floor,v){ tKick(when,true,floor,v); noiseHit(when,'bandpass',2600,1.2,.09*v,.025,T.duck); }
-function wClap(when,v){[0,.012,.026].forEach((o,i)=>noiseHit(when+o,'bandpass',1500,.9,v*(i===2?1:.6),i===2?.18:.03,T.duck));}
+function wClap(when,v){ lightAt(when,()=>LIGHT.flash(.25));[0,.012,.026].forEach((o,i)=>noiseHit(when+o,'bandpass',1500,.9,v*(i===2?1:.6),i===2?.18:.03,T.duck));}
 function wCrash(when,v){ noiseHit(when,'highpass',6000,.5,v,1.4,T.duck); }
 function rxTarget(f){ return Math.max(0,Math.min(1,(f-1.8)/4.4)); }
 function wReact(tD){ // called every animation frame (data time tD)
@@ -1829,7 +1910,7 @@ function v5Sub(m,when,dur,v){ const o=ctx.createOscillator(),g=ctx.createGain();
 function v5WaitStop(when){ const c=Math.max(ctx.currentTime,when||0);
   if(W.air){ W.air.g.gain.cancelScheduledValues(c); W.air.g.gain.setTargetAtTime(0,c,.08); W.air.src.stop(c+.6); W.air=null; }
   if(W.ah){ W.ah.g.gain.cancelScheduledValues(c); W.ah.g.gain.setTargetAtTime(0,c,.05); W.ah.os.forEach(o=>o.stop(c+.4)); W.ah=null; } }
-function v5Snare(when,v){ noiseHit(when,'bandpass',1900,.8,v,.07,T.duck); }
+function v5Snare(when,v){ lightAt(when,()=>LIGHT.strobe(.45+v*2)); noiseHit(when,'bandpass',1900,.8,v,.07,T.duck); }
 function v5Wait(when,tD,w,ts){
   const c=ctx.currentTime;
   if(inPhrase){ inPhrase=false; stopT=DK.lastPourT??tD; if(W.lb){W.lb.gain.cancelScheduledValues(c);W.lb.gain.setTargetAtTime(0,c,.06);}
@@ -1874,7 +1955,7 @@ function v5Tick(when,tD,o){
   // ---- section 1: the bloom writes the melody; piano plays every note as it is written
   if(SN===1){
     if(s16===0){ v5Strings(ch.slice(1,4),when,BARd,.035,1400,.8,false); ch.slice(1,4).forEach((m,i)=>wPiano(m,when+.25*beat+i*.03,BARd*.85,.04)); v5Sub(root,when,BARd*.95,.08);
-      if(W.decided){ const cell=wCell5(b,f,tD); let t=when; cell.forEach(([m,ln])=>{ if(m!==null) wPiano(wK(wDeg(m)),t,ln*e8,.16); t+=ln*e8; });
+      if(W.decided){ const cell=wCell5(b,f,tD); let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ wPiano(wK(wDeg(m)),t,ln*e8,.16); const tt0=t; lightAt(tt0,()=>LIGHT.flash(.45)); } t+=ln*e8; });
         const i=((b%8)+8)%8; explain(ts+'　焖蒸写旋律 · 第 '+(i+1)+' 小节：'+wTr(wChordName(b))+'，手的起伏选了第 '+((W.hookWhy||[])[i]+1)+' 种句型'+(i===3?'（前 4 小节写完，后 4 小节由它变化回答）':'')); } }
     return; }
   const S3=SN===3;
@@ -1925,6 +2006,7 @@ function v5Tick(when,tD,o){
   if(lay>=7||(S3&&lay>=5)) for(let e=0;e<8;e++){ const m=ch.slice(1)[[0,1,2,3,2,1,0,2][e]]+12; wPluck(m,when+e*e8,e8*.9,.035,e%2?.6:-.6); }
   // L8 / S3: crash
   if(!W.hold&&((S3&&i8%2===0)||(lay>=8&&i8%4===0))) wCrash(when,.09);
+  if(S3) LV.s3b=b+1;
   if(S3){ const gb=b;   // bars since the drop landed
     if(gb>=2) for(let k=0;k<16;k++) tHat(when+k*TICK,.03,false);
     if(gb>=3) for(let e=0;e<8;e+=2) v5Sub(root-12,when+e*e8,e8*1.7,.1);
@@ -2090,7 +2172,7 @@ function onTickWalker(when,tD){
     if(cl>.05){ if(halfT?(s16===8):(s16===4||s16===12)) wClap(when,(S3?.3:.24)*cl); if(dbl&&(s16===2||s16===6||s16===10||s16===14)) wClap(when,(S3?.14:.11)*cl); }
     if(S3&&b%4===3&&s16>=12&&norm>.3) noiseHit(when,'bandpass',1900,.8,.06+.08*norm,.07,T.duck);
   }
-  if(peak&&s16===0) flashV=1.2;
+  if(peak&&s16===0){ flashV=1.2; LV.s3b=1+Math.floor((tick-W.peakTick)/16); }
   }
   if(tick%4===0) ringAt(tD,f,s16===0?1.3:.8);
 }
@@ -2396,8 +2478,11 @@ smoothChk.addEventListener('change',()=>sendCmd(0x08,smoothChk.checked?1:0));
 
 const gEl=document.getElementById('genres'),gInfo=document.getElementById('genreInfo');
 const spEl=document.getElementById('soundPick');
-spEl.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const g=gEl.querySelector('button[data-g="'+b.dataset.g+'"]'); if(g) g.click();
-  spEl.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+document.getElementById('lightBtn').addEventListener('click',e=>{ e.stopPropagation(); lightOpen(); });
+document.getElementById('lightView').addEventListener('click',e=>{ if(e.target.id==='strobeBtn') return; lightClose(); });
+document.getElementById('strobeBtn').addEventListener('click',e=>{ e.stopPropagation(); LV.strobeOn=!LV.strobeOn; e.target.textContent='频闪：'+(LV.strobeOn?'开':'关'); });
+spEl.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!b.dataset.g) return; const g=gEl.querySelector('button[data-g="'+b.dataset.g+'"]'); if(g) g.click();
+  spEl.querySelectorAll('button[data-g]').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
 function showGenre(){gInfo.textContent=GENRES[GENRE].label+'。三段：'+[1,2,3].map(k=>GENRES[GENRE].sect[k].name.split(' · ')[1]+' '+GENRES[GENRE].sect[k].bpm).join(' → ')+' BPM';}
 gEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;gEl.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));GENRE=b.dataset.g;
   if(ctx&&seg>0){TICK=60/sect().bpm/4;} showGenre(); paintScales();});
