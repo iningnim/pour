@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.0</title>
+<title>一杯咖啡的样子 v5.1</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.0</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.1</b> · <span id="verGenre">好听版</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -310,7 +310,15 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.0</summary>
+    <summary>版本说明 · v5.1</summary>
+    <h2>v5.1</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>结尾区间 238–250 g</b>（目标 −2 到 +10 g，随目标缩放）：第三段只有累积到 238 g 以上停手 0.6 秒才收掉敲锣；低于 238 g 停手进入等待；到 250 g 手没停也自动收掉敲锣；点"结束"任何时候都立刻收掉敲锣。（好听版和跟手版都适用）</li>
+      <li><b>累积水量是参数</b>（好听版）：越倒越亮、空间越开阔；最低层数随水量抬高（第二段 30% 后至少 2 层、45% 后至少 3 层，并叠上高八度主奏；第三段至少 6 层、80% 后 7 层、92% 后 8 层且每小节镲）。说明行显示百分比。</li>
+      <li><b>第二次等待更快进入状态</b>：集气速度加倍，约 6 秒推满（第一次等待仍约 12 秒）。</li>
+      <li><b>第三段不酝酿</b>（好听版）：一注水就在第一拍砸下去直接顶点，从第 1 小节开始。</li>
+    </ul>
     <h2>v5.0 · 好听版</h2>
     <h3>本版重点</h3>
     <ul>
@@ -936,7 +944,7 @@ const GENRES={
  v5:{label:'好听版：焖蒸写下这一杯的旋律，后面两段发展它；流速每小节决定乐器层次（8 层），第三段升调、酝酿后直接顶点 → 一声锣',sect:[null,
   {name:'第一段 · 焖蒸',bpm:94,desc:'一声锣。弦乐垫底，钢琴把旋律一小节一小节写出来'},
   {name:'第二段 · 律动',bpm:94,desc:'两声锣。Faded 式拨弦唱旋律，乐器随流速逐层加入（最多 6 层）'},
-  {name:'第三段 · Drop',bpm:94,desc:'三声锣。升调，酝酿后直接顶点：超锯齿、反拍和弦、合唱、四拍底鼓'}]},
+  {name:'第三段 · Drop',bpm:94,desc:'三声锣。升调，一进来就是顶点：超锯齿、反拍和弦、合唱、四拍底鼓'}]},
  walker:{label:'跟手版：流速直接控制声音（17 层、流速之声）；前奏 → 律动 → Drop 与顶点 → 一声锣',sect:[null,
   {name:'第一段 · 前奏',bpm:94,desc:'一声锣。柔和和弦，钢琴弹出这一杯旋律的慢版骨架；旋律边冲边定'},
   {name:'第二段 · 律动',bpm:94,desc:'两声锣。底鼓、贝斯、拍手进来，主旋律完整唱一遍'},
@@ -1687,6 +1695,9 @@ function wCrash(when,v){ noiseHit(when,'highpass',6000,.5,v,1.4,T.duck); }
 function rxTarget(f){ return Math.max(0,Math.min(1,(f-1.8)/4.4)); }
 function wReact(tD){ // called every animation frame (data time tD)
   if(!ctx||!T||!T.rxF) return; const c=ctx.currentTime;
+  if(GENRE==='v5'&&!X.ended&&!DK.outro){ const pg=Math.max(0,Math.min(1,sample(tD).w/TARGET));
+    T.rxF.frequency.setTargetAtTime(4500+15500*pg*pg,c,.3); T.rxG.gain.setTargetAtTime(1,c,.1); if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(.38+.35*pg,c,.3);
+    if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.05); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.05); RX.neutral=false; RX.lastT=tD; return; }
   if(GENRE!=='walker'||!inPhrase||X.ended||DK.outro){
     if(!RX.neutral){ T.rxF.frequency.setTargetAtTime(20000,c,.05); T.rxG.gain.setTargetAtTime(1,c,.05); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.05); if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.04); RX.neutral=true; }
     if(GENRE!=='walker'&&COMP&&COMP.ratio.value!==4){ COMP.threshold.setTargetAtTime(-14,c,.1); COMP.ratio.setTargetAtTime(4,c,.1); }
@@ -1779,38 +1790,25 @@ function v5Tick(when,tD,o){
         const i=((b%8)+8)%8; explain(ts+'　焖蒸写旋律 · 第 '+(i+1)+' 小节：'+wTr(wChordName(b))+'，手的起伏选了第 '+((W.hookWhy||[])[i]+1)+' 种句型'+(i===3?'（前 4 小节写完，后 4 小节由它变化回答）':'')); } }
     return; }
   const S3=SN===3;
-  // ---- section 3: build ~28 beats, hold breath, then the peak until the hand stops (same as the responsive branch)
-  let phase='groove';
-  if(S3){
-    if(realPour) W.s3n=(W.s3n||0)+1;
-    const GAP=Math.max(2,Math.min(6,Math.round(.45/TICK)));
-    if(!W.peaked){
-      if(!W.gap){ if((W.s3n||0)>=28&&s16===16-GAP){ W.gap=true; T.uwG.gain.cancelScheduledValues(when); T.uwG.gain.setTargetAtTime(0,when,.01); explain(ts+'　屏息'); return; } phase='build'; }
-      else { if(s16!==0) return;
-        W.peaked=true;W.gap=false;W.peakTick=tick; T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
-        T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
-        MASTER.gain.cancelScheduledValues(when);MASTER.gain.setValueAtTime(Math.min(1.4,SECVOL[3]*1.35),when);
-        dropHit(when); [0,7,12].forEach(k=>mang(wK(48)+k,when,.28,5)); subDrop(when);
-        DK.title='顶点';DK.titleT=tD;flashCol='255,215,120';flashV=1.6;X.hold=tD+2; explain(ts+'　顶点！'+Math.round(w)+' g'); }
-    }
-    if(W.peaked) phase='peak';
-  }
-  if(phase==='build'){
-    const prog=Math.min(1,(W.s3n||0)/28), iv=prog<.4?4:prog<.75?2:1;
-    if(tick%iv===0) noiseHit(when,'bandpass',1900+prog*900,.8,.06+.16*prog,.07,T.duck);
-    T.rsF.frequency.setTargetAtTime(Math.min(9000,300*Math.pow(2,prog*4.6)),when,.08); T.rsG.gain.setTargetAtTime(.03+.12*prog*prog,when,.08);
-    if(s16===0){ v5Strings(ch.slice(1),when,BARd,.05,900+2400*prog,.2,false); v5Sub(root,when,BARd*.9,.1); }
-    return; }
+  // ---- section 3: no build — the first downbeat of the pour IS the drop/peak, held until the hand stops
+  if(S3&&!W.peaked&&s16===0){
+    W.peaked=true;W.gap=false;W.peakTick=tick; T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
+    T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
+    MASTER.gain.cancelScheduledValues(when);MASTER.gain.setValueAtTime(Math.min(1.4,SECVOL[3]*1.35),when);
+    dropHit(when); [0,7,12].forEach(k=>mang(wK(48)+k,when,.28,5)); subDrop(when);
+    DK.title='顶点';DK.titleT=tD;flashCol='255,215,120';flashV=1.6;X.hold=tD+2; explain(ts+'　第三段一进来就是顶点：'+Math.round(w)+' g'); }
   if(s16!==0) return;            // everything below is laid out once per bar, on the downbeat
   // ---- layer for this bar from the average flow of the bar just played
   const fAvg=meanFlow(tD,BARd), first=!W.v5lay;
-  let lay=Math.min(v5LayerOf(first?f:fAvg),S3?8:6); if(S3) lay=Math.max(lay,4);
+  const pg=Math.max(0,Math.min(1,w/TARGET));   // how far along the cup is
+  let lay=Math.min(v5LayerOf(first?f:fAvg),S3?8:6);
+  lay=Math.max(lay, S3?(pg>=.92?8:pg>.8?7:6):(pg>.45?3:pg>.3?2:1));
   W.v5lay=lay; W.v5f=first?f:fAvg;
   const cell=wCell5(b,f,tD), i8=((b%8)+8)%8;
   // L1: melody (+ soft broken piano chords)
   if(lay<=3) ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*e8,BARd*.8,.05));
   { let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ const mm=wK(wDeg(m)), d=ln*e8;
-      if(!S3){ v5Faded(mm,t,d,.2+.02*lay); if(lay<=2) wPiano(mm,t,d,.1); }
+      if(!S3){ v5Faded(mm,t,d,.2+.02*lay); if(lay<=2) wPiano(mm,t,d,.1); if(pg>.45) v5Faded(mm+12,t,d,.1*Math.min(1,(pg-.45)/.15)); }
       else { v5Faded(mm,t,d,.2); v5Super(mm+12,t,d,.06+.012*lay); if(lay>=8) v5Super(mm,t,d,.06); }
       if(lay>=6){ const third=((m%5)+5)%5===0||((m%5)+5)%5===3?3:4; v5Strings([mm-12+third],t,d,.045,3000,.08,false); } }
     t+=ln*e8; }); }
@@ -1832,8 +1830,8 @@ function v5Tick(when,tD,o){
   // L7: arpeggio (S3 from L5)
   if(lay>=7||(S3&&lay>=5)) for(let e=0;e<8;e++){ const m=ch.slice(1)[[0,1,2,3,2,1,0,2][e]]+12; wPluck(m,when+e*e8,e8*.9,.035,e%2?.6:-.6); }
   // L8 / S3: crash
-  if((S3&&i8%2===0)||(lay>=8&&i8%4===0)) wCrash(when,.09);
-  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g');
+  if((S3&&(i8%2===0||pg>=.92))||(lay>=8&&i8%4===0)) wCrash(when,.09);
+  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g（'+Math.round(pg*100)+'%）');
 }
 function onTickWalker(when,tD){
   technoSetup(); dkFx();
@@ -1842,8 +1840,9 @@ function onTickWalker(when,tD){
   if(DK.outro){ return; }
   if(X.ended) return;
   if(realPour){ DK.lastPourT=tD; DK.lastF=sm.f; }
+  if(seg>=3&&w>=TARGET+10){ wWaitPad(false,when); playEnding(tD,w); return; }   // poured past the window: close anyway
   const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<1.5;
-  if(breath&&seg>=3&&(W.peaked||w>=TARGET-10)&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
+  if(breath&&seg>=3&&w>=TARGET-2&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
   const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
   if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); }
   const SN=Math.max(1,Math.min(3,seg));
@@ -1856,11 +1855,11 @@ function onTickWalker(when,tD){
       explain(ts+'　停手：间奏。呼吸、底鼓由远到近，集气从现在开始越积越满，悬着的音等你回来'+(W.decided?'（这一杯：'+W.bpm+' BPM，'+W_KEYS[W.key]+'，'+W.prog.map(wTr).join('–')+'，主奏'+(W.bright?'拨弦':'钢琴')+'）':'')); }
     if(stopT<=0) return;
     const wait=Math.max(0,tD-stopT);
-    if(seg>=3&&(W.peaked||w>=TARGET-10)&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
-    const br=wBreath(when,wait)||0, s16w=((tick%16)+16)%16;
-    // gathering: starts at the stop and fills up over ~12 s, then holds
-    const acc=Math.min(1,wait/12), rise=wait<4?0:Math.min(1,(wait-4)/8);
-    const every=wait<4?16:wait<8?8:4;
+    if(seg>=3&&w>=TARGET-2&&wait>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
+    const ww=wait*(seg>=2?2:1);   // the second wait gathers twice as fast (full in ~6 s)
+    const br=wBreath(when,ww)||0, s16w=((tick%16)+16)%16;
+    const acc=Math.min(1,ww/12), rise=ww<4?0:Math.min(1,(ww-4)/8);
+    const every=ww<4?16:ww<8?8:4;
     if(wait<60&&s16w%every===0) wWallKick(when,br,acc);
     if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.07*acc);
     const mc=Math.min(4,.85/Math.max(.2,MASTER.gain.value));
@@ -1893,6 +1892,7 @@ function onTickWalker(when,tD){
     X.hold=tD+1.5; explain(ts+'　继续'+sect().name);
   } else if(!inPhrase){
     inPhrase=true;X.tier=tier;DK.startedSeg=seg; wWaitPad(false,when); W.v5lay=0;
+    if(GENRE==='v5'&&SN===3) tick=0;   // the drop lands right now, on bar 1 beat 1
     if((W.gathered||0)>.33&&SN>=2){ wCrash(when,.06+.1*W.gathered); } W.gathered=0;
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
