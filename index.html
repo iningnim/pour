@@ -330,6 +330,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     <ul>
       <li><b>第三段第一拍不再打架</b>（好听版）：去掉入口叠在一起的 6 声金属锣（FM 合成，泛音不在音阶上）和两个往下滑的低频；改成一声和谐的钵声，音高跟第一小节真实的和弦走（根音 + 五度），低频冲击固定在这个根音上。冲击噪声、镲片和灯光爆亮保留。</li>
       <li>第一段、第二段的入口提示锣也换成同样的钵声（只敲一声，跟当下和弦）。</li>
+      <li>总输出加了一道柔和的峰值保护：平时完全不动，只在心跳等最响的瞬间把峰值磨圆，避免喇叭爆音。</li>
     </ul>
     <h2>v5.9</h2>
     <ul>
@@ -769,7 +770,7 @@ function lightClose(){ LV.on=false; document.getElementById('lightView').hidden=
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   const master=ctx.createGain();MASTER=master;master.gain.value=.9;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.knee.value=12;comp.attack.value=.01;comp.release.value=.2;
-  master.connect(comp);comp.connect(ctx.destination);COMP=comp;
+  master.connect(comp);COMP=comp;{ const lim=ctx.createWaveShaper(),n=2048,cv=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1,a=Math.abs(x);cv[i]=Math.sign(x)*(a<.8?a:.8+.2*Math.tanh((a-.8)/.2));}lim.curve=cv;lim.oversample='4x';comp.connect(lim);lim.connect(ctx.destination); }   // v5.10: soft peak guard — untouched below 0.8, rounds peaks instead of hard clipping
   { const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=170;const sh=ctx.createWaveShaper();const n=1024,cv=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;cv[i]=Math.tanh(6*x);}sh.curve=cv;
     const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=200;const lp2=ctx.createBiquadFilter();lp2.type='lowpass';lp2.frequency.value=1100;
     PHONEG=ctx.createGain();PHONEG.gain.value=PHONE?.55:0;master.connect(lp);lp.connect(sh);sh.connect(hp);hp.connect(lp2);lp2.connect(PHONEG);PHONEG.connect(comp); }
