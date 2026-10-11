@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.1</title>
+<title>一杯咖啡的样子 v5.2</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.1</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.2</b> · <span id="verGenre">好听版</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -310,7 +310,14 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.1</summary>
+    <summary>版本说明 · v5.2</summary>
+    <h2>v5.2</h2>
+    <h3>本版重点（好听版）</h3>
+    <ul>
+      <li><b>三段靠段落本身拉开</b>：累积水量不再影响亮度、空间、最低层数等声音，只管结构（30 g / 110 g 换段、238–250 g 结尾、区分段内停顿与等待）。第三段固定从第 6 层起。</li>
+      <li><b>第三段旋律在最上面</b>：主奏加大约 6 dB、叠高八度，走单独的主奏通道（2.4 kHz 提亮、少混响、带回声）；锯齿和弦、反拍短音、合唱、高八度弦乐都调小并收掉高频，给旋律让出空间。</li>
+      <li><b>段内停顿不是等待</b>：停手时如果水量还不够进下一段（第三段为 238 g 以下），音乐不进入呼吸/集气，留在当前段落收薄继续走（第二段最多 2 层、第三段最多 3 层，旋律变轻），一注水马上回到原来的厚度。只有水量够换段时的停手，才进入两次等待。</li>
+    </ul>
     <h2>v5.1</h2>
     <h3>本版重点</h3>
     <ul>
@@ -1340,7 +1347,7 @@ function darkOutroStart(tD,w){
   if(DK.fx.rw){ DK.fx.rw.gain.cancelScheduledValues(c); DK.fx.rw.gain.setTargetAtTime(0,c,.06); }
   DK.fx.send.gain.cancelScheduledValues(c); DK.fx.send.gain.setValueAtTime(0,c);
   if(T.rxG){ T.rxG.gain.cancelScheduledValues(c); T.rxG.gain.setValueAtTime(0,c); }
-  if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.03); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.03); wWaitPad&&W.waitPad&&wWaitPad(false,c);
+  if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.03); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.03); if(W.lb){W.lb.gain.cancelScheduledValues(c);W.lb.gain.setTargetAtTime(0,c,.03);} wWaitPad&&W.waitPad&&wWaitPad(false,c);
   MASTER.gain.setValueAtTime(Math.max(.75,SECVOL[3]),c);
   if(DK.yn){ DK.yn.rainG.gain.setValueAtTime(0,c); DK.yn.drG.gain.setValueAtTime(0,c); }
   const TRx=sect().tr, lowM=midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
@@ -1579,7 +1586,7 @@ function onTickDark(when,tD){
 /* ================= v4.0 · melodic electronic engine =================
    one language (minor i–VI–III–VII family, pentatonic C E♭ F G B♭ melody cells), the cup chooses everything inside it */
 const W={bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,hold:null};
-function wReset(){try{ if(typeof DK!=='undefined'&&DK.fx&&ctx){ const n=ctx.currentTime; DK.fx.send.gain.setValueAtTime(.5,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); } if(typeof T!=='undefined'&&T&&T.rxG&&ctx) T.rxG.gain.setValueAtTime(1,ctx.currentTime); }catch(e){}
+function wReset(){try{ if(typeof DK!=='undefined'&&DK.fx&&ctx){ const n=ctx.currentTime; DK.fx.send.gain.setValueAtTime(.5,n); if(DK.fx.rw) DK.fx.rw.gain.setValueAtTime(.55,n); } if(typeof T!=='undefined'&&T&&T.rxG&&ctx) T.rxG.gain.setValueAtTime(1,ctx.currentTime); if(W.lb&&ctx) W.lb.gain.setValueAtTime(1,ctx.currentTime); }catch(e){}
   RX.x=0;RX.f=0;RX.gate=0;if(W.vo)W.vo.step=null;RX.lastT=null;if(W.wt)W.wt.next=null;Object.assign(W,{bpm:94,key:0,prog:null,hook:[],bright:true,decided:false,s1flow:[],wobs:[],peaked:false,peakTick:0,gap:false,landStage:0,waitPad:null,s3n:0,v5lay:0,v5f:0});}
 const W_PROGS=[['Cm','Ab','Eb','Bb'],['Cm','Bb','Ab','Bb'],['Ab','Bb','Cm','Cm'],['Cm','Eb','Bb','Ab']];
 const W_CH={Cm:[48,55,60,63,67],Ab:[44,51,56,60,63],Eb:[51,55,58,63,67],Bb:[46,53,58,62,65]};
@@ -1695,9 +1702,6 @@ function wCrash(when,v){ noiseHit(when,'highpass',6000,.5,v,1.4,T.duck); }
 function rxTarget(f){ return Math.max(0,Math.min(1,(f-1.8)/4.4)); }
 function wReact(tD){ // called every animation frame (data time tD)
   if(!ctx||!T||!T.rxF) return; const c=ctx.currentTime;
-  if(GENRE==='v5'&&!X.ended&&!DK.outro){ const pg=Math.max(0,Math.min(1,sample(tD).w/TARGET));
-    T.rxF.frequency.setTargetAtTime(4500+15500*pg*pg,c,.3); T.rxG.gain.setTargetAtTime(1,c,.1); if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(.38+.35*pg,c,.3);
-    if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.05); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.05); RX.neutral=false; RX.lastT=tD; return; }
   if(GENRE!=='walker'||!inPhrase||X.ended||DK.outro){
     if(!RX.neutral){ T.rxF.frequency.setTargetAtTime(20000,c,.05); T.rxG.gain.setTargetAtTime(1,c,.05); if(W.wt) W.wt.g.gain.setTargetAtTime(0,c,.05); if(W.vo) W.vo.g.gain.setTargetAtTime(0,c,.04); RX.neutral=true; }
     if(GENRE!=='walker'&&COMP&&COMP.ratio.value!==4){ COMP.threshold.setTargetAtTime(-14,c,.1); COMP.ratio.setTargetAtTime(4,c,.1); }
@@ -1754,7 +1758,11 @@ function v5Haas(src,v){ // stereo width for a mono source: dry left-ish, 12 ms l
   if(ctx.createStereoPanner){ const pl=ctx.createStereoPanner(), pr=ctx.createStereoPanner(), d=ctx.createDelay(.05); pl.pan.value=-.55; pr.pan.value=.55; d.delayTime.value=.012;
     src.connect(pl); pl.connect(out); src.connect(d); d.connect(pr); pr.connect(out); } else src.connect(out);
   return out; }
-function v5Faded(m,when,dur,v){ // Faded-style pluck
+function v5LeadBus(){ // the drop's melody: its own bus, a presence lift, light room, echoes — muted on waits and at the ending
+  if(W.lb) return W.lb; dkFx(); const g=ctx.createGain(); g.gain.value=1; const pk=ctx.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=2400; pk.Q.value=.8; pk.gain.value=4;
+  g.connect(pk); pk.connect(MASTER); const sd=ctx.createGain(); sd.gain.value=.35; pk.connect(sd); sd.connect(DK.fx.send); const sr=ctx.createGain(); sr.gain.value=.12; pk.connect(sr); sr.connect(DK.fx.rev);
+  W.lb=g; return g; }
+function v5Faded(m,when,dur,v,lead){ // Faded-style pluck
   const f=mtoh(m), L=Math.max(.2,dur)+.45, fl=ctx.createBiquadFilter(); fl.type='lowpass'; fl.Q.value=.9;
   fl.frequency.setValueAtTime(7400,when); fl.frequency.setTargetAtTime(900,when,.12);
   const g=ctx.createGain(); g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(1,when+.002); g.gain.setTargetAtTime(.22,when+.003,.22); g.gain.setTargetAtTime(0,when+Math.max(.15,dur),.12);
@@ -1762,15 +1770,15 @@ function v5Faded(m,when,dur,v){ // Faded-style pluck
   const sq=ctx.createOscillator();sq.type='square';sq.frequency.value=f/2;const sg=ctx.createGain();sg.gain.value=.3;sq.connect(sg);sg.connect(fl);sq.start(when);sq.stop(when+L);
   fl.connect(g);
   const gl=ctx.createOscillator(),gg=ctx.createGain(); gl.type='sine'; gl.frequency.value=f*2; gg.gain.setValueAtTime(0,when); gg.gain.linearRampToValueAtTime(.25,when+.003); gg.gain.setTargetAtTime(0,when+.004,.3); gl.connect(gg); gg.connect(g); gl.start(when); gl.stop(when+L);
-  wOut(v5Haas(g,v),false); }
-function v5Super(m,when,dur,v){ // Alone-style supersaw pluck, 7 voices spread
+  const hz=v5Haas(g,v); if(lead) hz.connect(v5LeadBus()); else wOut(hz,false); }
+function v5Super(m,when,dur,v,lead){ // Alone-style supersaw pluck, 7 voices spread
   const f=mtoh(m), L=Math.max(.25,dur)+.5, fl=ctx.createBiquadFilter(); fl.type='lowpass'; fl.Q.value=.7;
   fl.frequency.setValueAtTime(10000,when); fl.frequency.setTargetAtTime(2000,when,.3);
   const g=ctx.createGain(); g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.003); g.gain.setTargetAtTime(v*.4,when+.004,.4); g.gain.setTargetAtTime(0,when+Math.max(.2,dur),.15);
   [-25,-16,-8,0,8,16,25].forEach((d,k)=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=d;const og=ctx.createGain();og.gain.value=.14;
     if(ctx.createStereoPanner){const p=ctx.createStereoPanner();p.pan.value=(k/6)*2-1;o.connect(og);og.connect(p);p.connect(fl);} else {o.connect(og);og.connect(fl);} o.start(when);o.stop(when+L);});
   const s=ctx.createOscillator();s.type='sine';s.frequency.value=f/2;const sg=ctx.createGain();sg.gain.value=.3;s.connect(sg);sg.connect(fl);s.start(when);s.stop(when+L);
-  fl.connect(g); wOut(g,false); }
+  fl.connect(g); if(lead) g.connect(v5LeadBus()); else wOut(g,false); }
 function v5Strings(ms,when,dur,v,cut,att,duck){ // 6-voice string ensemble with gentle vibrato
   const fl=ctx.createBiquadFilter(),g=ctx.createGain(); fl.type='lowpass'; fl.frequency.value=cut; fl.Q.value=.5;
   g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+att); g.gain.setValueAtTime(v,when+Math.max(att,dur)); g.gain.linearRampToValueAtTime(0,when+dur+.9);
@@ -1800,24 +1808,23 @@ function v5Tick(when,tD,o){
   if(s16!==0) return;            // everything below is laid out once per bar, on the downbeat
   // ---- layer for this bar from the average flow of the bar just played
   const fAvg=meanFlow(tD,BARd), first=!W.v5lay;
-  const pg=Math.max(0,Math.min(1,w/TARGET));   // how far along the cup is
-  let lay=Math.min(v5LayerOf(first?f:fAvg),S3?8:6);
-  lay=Math.max(lay, S3?(pg>=.92?8:pg>.8?7:6):(pg>.45?3:pg>.3?2:1));
+  let lay=Math.min(v5LayerOf(first?f:fAvg),S3?8:6); if(S3) lay=Math.max(lay,6);
+  if(W.hold) lay=Math.min(lay,S3?3:2);   // a pause inside the section: thin, but the music keeps going
   W.v5lay=lay; W.v5f=first?f:fAvg;
   const cell=wCell5(b,f,tD), i8=((b%8)+8)%8;
   // L1: melody (+ soft broken piano chords)
   if(lay<=3) ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*e8,BARd*.8,.05));
   { let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ const mm=wK(wDeg(m)), d=ln*e8;
-      if(!S3){ v5Faded(mm,t,d,.2+.02*lay); if(lay<=2) wPiano(mm,t,d,.1); if(pg>.45) v5Faded(mm+12,t,d,.1*Math.min(1,(pg-.45)/.15)); }
-      else { v5Faded(mm,t,d,.2); v5Super(mm+12,t,d,.06+.012*lay); if(lay>=8) v5Super(mm,t,d,.06); }
+      if(!S3){ v5Faded(mm,t,d,(.2+.02*lay)*(W.hold?.6:1)); if(lay<=2) wPiano(mm,t,d,.1); }
+      else { const k=W.hold?.6:1; v5Faded(mm,t,d,.36*k,true); v5Faded(mm+12,t,d,.12*k,true); v5Super(mm+12,t,d,(.11+.014*lay)*k,true); if(lay>=8) v5Super(mm,t,d,.09*k,true); }
       if(lay>=6){ const third=((m%5)+5)%5===0||((m%5)+5)%5===3?3:4; v5Strings([mm-12+third],t,d,.045,3000,.08,false); } }
     t+=ln*e8; }); }
   // L2: pad (S2 strings; S3 supersaw stack + offbeat stabs + choir + high strings + air)
   if(lay>=2){
     if(!S3) v5Strings(ch.slice(1),when,BARd,.05,2600,.45,true);
-    else { wSaws(ch.slice(1).concat(ch.slice(2).map(m=>m+12)),when,BARd,.028,5200,[-18,-9,-3,3,9,18],.01,true);
-      for(let q=0;q<4;q++) wSaws(ch.slice(1),when+q*beat+e8,e8*.8,.03,7000,[-18,-9,-3,3,9,18],.004,true);
-      choir([ch[2]+12,ch[3]+12,ch[4]+12],when,BARd,.07); v5Strings([ch[2]+24,ch[3]+24],when,BARd,.03,6000,.2,false);
+    else { wSaws(ch.slice(1).concat(ch.slice(2).map(m=>m+12)),when,BARd,.018,3600,[-18,-9,-3,3,9,18],.01,true);
+      for(let q=0;q<4;q++) wSaws(ch.slice(1),when+q*beat+e8,e8*.8,.02,4200,[-18,-9,-3,3,9,18],.004,true);
+      choir([ch[2],ch[3],ch[4]],when,BARd,.04); v5Strings([ch[2]+24,ch[3]+24],when,BARd,.016,5000,.2,false);
       noiseHit(when,'highpass',6000,.5,.025,BARd,T.duck); } }
   // L3: kick (S2 on 1 & 3, S3 four on the floor with a click layer)
   if(lay>=3){ for(let q=0;q<4;q++){ if(!S3&&q%2) continue; const tq=when+q*beat; if(S3) wKick(tq,.28,1); else tKick(tq,true,.6,.9); } }
@@ -1830,8 +1837,8 @@ function v5Tick(when,tD,o){
   // L7: arpeggio (S3 from L5)
   if(lay>=7||(S3&&lay>=5)) for(let e=0;e<8;e++){ const m=ch.slice(1)[[0,1,2,3,2,1,0,2][e]]+12; wPluck(m,when+e*e8,e8*.9,.035,e%2?.6:-.6); }
   // L8 / S3: crash
-  if((S3&&(i8%2===0||pg>=.92))||(lay>=8&&i8%4===0)) wCrash(when,.09);
-  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g（'+Math.round(pg*100)+'%）');
+  if(!W.hold&&((S3&&i8%2===0)||(lay>=8&&i8%4===0))) wCrash(when,.09);
+  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g'+(W.hold?' · 段内停顿':''));
 }
 function onTickWalker(when,tD){
   technoSetup(); dkFx();
@@ -1843,12 +1850,15 @@ function onTickWalker(when,tD){
   if(seg>=3&&w>=TARGET+10){ wWaitPad(false,when); playEnding(tD,w); return; }   // poured past the window: close anyway
   const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<1.5;
   if(breath&&seg>=3&&w>=TARGET-2&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
-  const pouring=realPour||breath, f=realPour?sm.f:(breath?(DK.lastF||sm.f):sm.f);
-  if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:1,when,.08); }
+  const kT=TARGET/240, needNext=seg>=3?TARGET-2:[0,30*kT,110*kT][Math.max(1,seg)];
+  const hold=GENRE==='v5'&&!realPour&&!breath&&inPhrase&&seg>=1&&w<needNext;   // not enough water to move on → keep playing, thin
+  W.hold=hold;
+  const pouring=realPour||breath||hold, f=realPour?sm.f:((breath||hold)?(DK.lastF||sm.f):sm.f);
+  if(inPhrase){ T.uwG.gain.setTargetAtTime(breath?.6:(hold?.75:1),when,.12); }
   const SN=Math.max(1,Math.min(3,seg));
   // ---------- waiting: muffled chord + heartbeat, riser after 12 s, no melody
   if(!pouring){
-    if(inPhrase){ inPhrase=false; stopT=DK.lastPourT??tD; const c=ctx.currentTime;
+    if(inPhrase){ inPhrase=false; stopT=DK.lastPourT??tD; const c=ctx.currentTime; if(W.lb){W.lb.gain.cancelScheduledValues(c);W.lb.gain.setTargetAtTime(0,c,.06);}
       T.uwF.frequency.cancelScheduledValues(c);T.uwF.frequency.setTargetAtTime(220,c,.05);T.uwG.gain.setTargetAtTime(.15,c,.05);
       if(seg===1&&!W.brightSet){ W.bright=(W.s1flow.length?W.s1flow.reduce((a,b)=>a+b,0)/W.s1flow.length:4)>4.2; W.brightSet=true; }
       wWaitPad(true,c);
@@ -1868,7 +1878,7 @@ function onTickWalker(when,tD){
     if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　间奏 '+wait.toFixed(0)+' 秒 · 集气 '+Math.round(acc*100)+'%（已注 '+Math.round(w)+' / '+TARGET+' g）');
     return;
   }
-  X.pourTime+=TICK;
+  if(realPour) X.pourTime+=TICK;
   if(!inPhrase) X.pourStart=tD;
   if(tD-X.pourStart>1){ if(!X.cal){X.cs+=f;X.cn++; if(X.cn>=12){X.center=X.cs/X.cn;X.cal=true;}} else X.center+=(f-X.center)*(TICK/12); }
   X.center=Math.max(2.5,Math.min(6.5,X.center));
@@ -1885,13 +1895,13 @@ function onTickWalker(when,tD){
   }
   // ---------- section start / resume
   if(!inPhrase&&DK.startedSeg===seg){
-    inPhrase=true;X.tier=tier; wWaitPad(false,when);
+    inPhrase=true;X.tier=tier; wWaitPad(false,when); if(W.lb){W.lb.gain.cancelScheduledValues(when);W.lb.gain.setValueAtTime(1,when);}
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     if((W.gathered||0)>.33){ wCrash(when,.06+.1*W.gathered); wKick(when,.3,.6+.4*W.gathered); } W.gathered=0;
     X.hold=tD+1.5; explain(ts+'　继续'+sect().name);
   } else if(!inPhrase){
-    inPhrase=true;X.tier=tier;DK.startedSeg=seg; wWaitPad(false,when); W.v5lay=0;
+    inPhrase=true;X.tier=tier;DK.startedSeg=seg; wWaitPad(false,when); W.v5lay=0; if(W.lb){W.lb.gain.cancelScheduledValues(when);W.lb.gain.setValueAtTime(1,when);}
     if(GENRE==='v5'&&SN===3) tick=0;   // the drop lands right now, on bar 1 beat 1
     if((W.gathered||0)>.33&&SN>=2){ wCrash(when,.06+.1*W.gathered); } W.gathered=0;
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
