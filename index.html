@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.2</title>
+<title>一杯咖啡的样子 v5.3</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -167,7 +167,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.2</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.3</b> · <span id="verGenre">好听版</span></span>
   </header>
 
   <div class="stage" id="stage">
@@ -310,7 +310,12 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.2</summary>
+    <summary>版本说明 · v5.3</summary>
+    <h2>v5.3</h2>
+    <h3>本版重点</h3>
+    <ul>
+      <li><b>换段门槛</b>：第一段累积 29 g 以上停手（超过 1.5 秒）才进入第一次等待并在再注水时进第二段；第二段 120 g 以上才进入第二次等待并进第三段（随目标水量等比例缩放）。门槛以下的停手都是段内停顿。</li>
+    </ul>
     <h2>v5.2</h2>
     <h3>本版重点（好听版）</h3>
     <ul>
@@ -1526,7 +1531,7 @@ function onTickDark(when,tD){
     T.rsG.gain.cancelScheduledValues(when);T.rsG.gain.setValueAtTime(0,when);
     T.uwF.frequency.cancelScheduledValues(when);T.uwF.frequency.setValueAtTime(20000,when);T.uwG.gain.cancelScheduledValues(when);T.uwG.gain.setValueAtTime(1,when);
     ynSet(SN===1?.005:SN===2?.004:0, SN===1?.015:SN===2?.012:.02, when);
-    const kT=TARGET/240, need=[0,30*kT,110*kT][Math.min(2,seg)];
+    const kT=TARGET/240, need=[0,29*kT,120*kT][Math.min(2,seg)];
     X.hold=tD+1.5; explain(ts+'　继续'+sect().name+'（累计 '+Math.round(w)+' g，'+(seg<3?'到 '+Math.round(need)+' g 并停手 1.5 秒以上才进入下一段':'最后一段')+'）');
   } else if(!inPhrase){
     inPhrase=true;X.tier=tier;DK.startedSeg=seg;
@@ -1850,7 +1855,7 @@ function onTickWalker(when,tD){
   if(seg>=3&&w>=TARGET+10){ wWaitPad(false,when); playEnding(tD,w); return; }   // poured past the window: close anyway
   const sinceStop=tD-(DK.lastPourT??-99), breath=!realPour&&inPhrase&&sinceStop<1.5;
   if(breath&&seg>=3&&w>=TARGET-2&&sinceStop>=.6){ wWaitPad(false,when); playEnding(tD,w); return; }
-  const kT=TARGET/240, needNext=seg>=3?TARGET-2:[0,30*kT,110*kT][Math.max(1,seg)];
+  const kT=TARGET/240, needNext=seg>=3?TARGET-2:[0,29*kT,120*kT][Math.max(1,seg)];
   const hold=GENRE==='v5'&&!realPour&&!breath&&inPhrase&&seg>=1&&w<needNext;   // not enough water to move on → keep playing, thin
   W.hold=hold;
   const pouring=realPour||breath||hold, f=realPour?sm.f:((breath||hold)?(DK.lastF||sm.f):sm.f);
@@ -2013,7 +2018,7 @@ let lastPourEnd=0; function calcLast(){lastPourEnd=0;for(let i=0;i<data.flow.len
 function step(dt){
   const {f,w}=sample(t), R=S*.46;
   if(f>=THR){
-    const kT=TARGET/240, need=[0,30*kT,110*kT,1e9][Math.min(3,seg)];
+    const kT=TARGET/240, need=[0,29*kT,120*kT,1e9][Math.min(3,seg)];
     if(!wasPouring && (seg===0 || (STYLE==='techno'&&isDK() ? (quiet>1.5 && w>=need) : quiet>1))){seg++;setDrone();if(STYLE==='techno'){TICK=60/sect().bpm/4;}nextTickD=Math.round(t*1000)/1000;tick=(STYLE==='acoustic'&&scale.meter==='bambuco'&&!(scale.deg2&&seg<2))?1:-1;}
     wasPouring=true;quiet=0;
     const [px,py]=toPx(pourPoint(t));
