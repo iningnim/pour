@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#120D0A">
-<title>一杯咖啡的样子 v5.8</title>
+<title>一杯咖啡的样子 v5.9</title>
 <style>
 /* Layout: one phone-width column, "listening room at night" — the coffee bed is the stage,
    an instrument readout under it, everything else folds away into drawers while brewing. */
@@ -176,7 +176,7 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 <main>
   <header class="top">
     <h1>一杯咖啡的样子</h1>
-    <span class="ver"><b>v5.8</b> · <span id="verGenre">好听版</span></span>
+    <span class="ver"><b>v5.9</b> · <span id="verGenre">好听版</span></span>
   </header>
   <div class="seg three" id="soundPick" role="group" aria-label="声音">
     <button data-g="v5" aria-pressed="true">好听版</button>
@@ -325,7 +325,14 @@ button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   <p class="foot">连上 Bookoo 秤后，声音、涟漪和粉床颜色都来自真实的重量和流速；注水落点的位置目前仍是模拟的。</p>
 
   <details class="notes">
-    <summary>版本说明 · v5.8</summary>
+    <summary>版本说明 · v5.9</summary>
+    <h2>v5.9</h2>
+    <ul>
+      <li><b>和声不再打架</b>（好听版）：B♭、E♭ 改成不带 D 的挂留/加九和弦，Cm、A♭ 去掉贴近旋律的九度；和弦都放在旋律下面；两条副旋律改成按音阶走（旋律下方两级的和弦音）；琶音只弹和弦音并放到旋律上方；合唱只唱根音、五度、七度。焖蒸、等待、段内停顿、第三段和结尾的主和弦都按这套规则。</li>
+      <li><b>第二段伴奏重做</b>：温暖柔和的垫底（少层、暗、起音快、抽吸轻）；贝斯跟和弦走根音–五度–八度并与底鼓对齐；柔和的噪声镲 + 很轻的沙锤 + 更圆的拍手；去掉低层的钢琴分解和弦；第二段混响变短。</li>
+      <li><b>第一次等待的心跳更响</b>（约 +5 dB，第二次等待也略加大）。</li>
+      <li><b>结尾的最后一声</b>：换成温暖的钵/钟声（软槌起音、慢慢颤动），落在主音上，约 6 秒到无声；去掉原来带"啪"声的锣。</li>
+    </ul>
     <h2>v5.8</h2>
     <ul><li><b>结尾自然收拢</b>（三种声音都适用）：停手 0.6 秒后，鼓和律动约 1 秒内退下、滤波合上；和声落到这一杯的主和弦（如 Am9），最后一个长音落在主音；锣与主和弦同一刻响起，混响和回声保留，约 6 秒一起淡到全无；灯光同步成一团暖光慢慢熄灭。不再整首一刀切、先静音。</li></ul>
     <h2>v5.7</h2>
@@ -1477,7 +1484,7 @@ function darkOutroStart(tD,w){
   MASTER.gain.setValueAtTime(Math.max(.75,SECVOL[3]),c);
   if(DK.yn){ DK.yn.rainG.gain.setTargetAtTime(0,c,.3); DK.yn.drG.gain.setTargetAtTime(0,c,.3); }
   const TRx=sect().tr, lowM=isW()?wK(48):midiOf(0)+TRx, ch=chordAt(ok?0:1,TRx);
-  const home=isW()?W_CHV.Cm.map(wK):[lowM].concat(chordAt(0,TRx).slice(0,4));
+  const home=isW()?[wK(48)].concat(W_SAFE.Cm.pad.map(wK)):[lowM].concat(chordAt(0,TRx).slice(0,4));
   const eb=ctx.createGain(); eb.gain.value=1.6; eb.connect(COMP);
   const ebr=ctx.createGain(); ebr.gain.value=.35; eb.connect(ebr); ebr.connect(DK.fx.rev);
   { // the home chord: warm saw ensemble, filter slowly closing, fades over ~6 s
@@ -1490,13 +1497,13 @@ function darkOutroStart(tD,w){
     const tn=home[0]+24, bo=ctx.createOscillator(), bg=ctx.createGain(); bo.type='triangle'; bo.frequency.value=mtoh(tn);
     bg.gain.setValueAtTime(0,hit); bg.gain.linearRampToValueAtTime(.09,hit+.005); bg.gain.setTargetAtTime(0,hit+.01,1.4); bo.connect(bg); bg.connect(eb); bo.start(hit); bo.stop(hit+7);
     const b2=ctx.createOscillator(), b2g=ctx.createGain(); b2.type='sine'; b2.frequency.value=mtoh(tn+12); b2g.gain.setValueAtTime(0,hit); b2g.gain.linearRampToValueAtTime(.04,hit+.004); b2g.gain.setTargetAtTime(0,hit+.01,.8); b2.connect(b2g); b2g.connect(eb); b2.start(hit); b2.stop(hit+5); }
-  // one gong, nothing else: crisp strike, rings and fades over ~5 s
-  { const f0=mtoh(lowM-12), parts=[[1,1,5],[1.48,.55,4.2],[2.0,.5,4.6],[2.76,.35,3.4],[3.42,.22,2.6],[4.1,.14,1.8],[.5,.45,5]];
-    parts.forEach(([r,a,dec],i)=>{const o=ctx.createOscillator(),g3=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f0*r*1.01,hit);o.frequency.exponentialRampToValueAtTime(f0*r,hit+.25);o.detune.value=i%2?4:-4;
-      g3.gain.setValueAtTime(0,hit);g3.gain.linearRampToValueAtTime(.32*a,hit+.004);g3.gain.exponentialRampToValueAtTime(.32*a*.35,hit+.6);g3.gain.linearRampToValueAtTime(.0001,hit+dec);
-      o.connect(g3);g3.connect(eb);o.start(hit);o.stop(hit+dec+.05);});
-    const n=ctx.createBufferSource();n.buffer=noiseBuf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=.9;const ng=ctx.createGain();
-    ng.gain.setValueAtTime(.5,hit);ng.gain.exponentialRampToValueAtTime(.0001,hit+.12);n.connect(bp);bp.connect(ng);ng.connect(eb);n.start(hit);n.stop(hit+.15); }
+  // the last sound: a warm bowl-like bell on the home note — soft mallet, slow shimmer, ~6 s to silence
+  { const f0=mtoh(home[0]); [[1,1,6],[2.76,.42,4.2],[5.40,.18,2.6],[8.93,.07,1.4]].forEach(([r,a,dec],i)=>[0,1.4].forEach(bt=>{
+      const o=ctx.createOscillator(),g3=ctx.createGain(); o.type='sine'; o.frequency.value=f0*r+bt*(i+1)*.5;
+      g3.gain.setValueAtTime(0,hit); g3.gain.linearRampToValueAtTime(.2*a,hit+.012); g3.gain.setTargetAtTime(0,hit+.02,dec/3.2);
+      o.connect(g3); g3.connect(eb); o.start(hit); o.stop(hit+dec+1); }));
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=320; const ng=ctx.createGain();
+    ng.gain.setValueAtTime(.18,hit); ng.gain.setTargetAtTime(0,hit+.002,.015); n.connect(lp); lp.connect(ng); ng.connect(eb); n.start(hit); n.stop(hit+.1); }
   DK.title='终'; DK.titleT=tD; DK.titleKeep=true; flashCol='255,235,190';
   setTimeout(()=>{flashV=1.8;},250);
   DK.outro={t0:tick,ok,startT:tD};
@@ -1951,30 +1958,58 @@ function v5Wait(when,tD,w,ts){
   if(stopT<=0) return;
   const wait=Math.max(0,tD-stopT);
   if(seg>=3&&w>=TARGET-2&&wait>=.6){ v5WaitStop(when); playEnding(tD,w); return; }
-  const s16w=((tick%16)+16)%16, b=Math.floor(Math.max(0,tick)/16), ch=wChordV(b), BARd=TICK*16;
-  if(s16w%8===0) hbPlay(when,1);                    // the heartbeat, from the first beat of the wait
+  const s16w=((tick%16)+16)%16, b=Math.floor(Math.max(0,tick)/16), sf=wSafe(b), BARd=TICK*16;
+  if(s16w%8===0) hbPlay(when,seg<=1?1.9:1.2);                    // the heartbeat, from the first beat of the wait
   if(seg<=1){
     const op=Math.min(1,wait/10);
-    if(s16w%4===0){ const q=s16w/4; wPiano(ch[[1,2,3,2][q]]+(q===2?12:0),when,TICK*7,.09*(q===0?1.2:1)); }
-    if(s16w===0){ v5Strings(ch.slice(1,4),when,BARd,.025+.035*op,500+2500*Math.pow(op,1.5),.8,false); if(op>.5) choir([ch[2]+12,ch[3]+12],when,BARd,.035*op); }
+    if(s16w%4===0){ const q=s16w/4; wPiano(sf.pad[[0,1,2,1][q]]+(q===2?12:0),when,TICK*7,.09*(q===0?1.2:1)); }
+    if(s16w===0){ v5Strings(sf.pad.slice(0,3),when,BARd,.025+.035*op,500+2500*Math.pow(op,1.5),.8,false); if(op>.5) choir(sf.choir,when,BARd,.035*op); }
     if(W.air){ const br=.5-.5*Math.cos(2*Math.PI*((((tick%32)+32)%32)/32)); W.air.lvl=.012+.03*br; W.air.f.frequency.setTargetAtTime(900+1800*br,when,.3); }
     W.gathered=op;
   } else {
     const pr=Math.min(1,wait/6), div=pr<.33?2:pr<.66?4:8;
     if(div===2){ if(s16w%2===0) v5Snare(when,.05+.12*pr); } else { v5Snare(when,.06+.14*pr); if(div===8) v5Snare(when+TICK/2,.06+.14*pr); }
     if(pr<.33){ if(s16w%4===0) tKick(when,true,.55,.8); } else if(pr<.66){ if(s16w%2===0) tKick(when,true,.55,.75); }
-    if(s16w===0) wSaws(ch.slice(1),when,BARd,.02+.02*pr,500+5500*pr,[-18,-9,-3,3,9,18],.05,false);
+    if(s16w===0) wSaws(sf.pad,when,BARd,.02+.02*pr,500+5500*pr,[-18,-9,-3,3,9,18],.05,false);
     const mc=Math.min(4,.85/Math.max(.2,MASTER.gain.value));
     T.rsF.frequency.setTargetAtTime(Math.min(8000,300*Math.pow(2,pr*4.6)),when,.1); T.rsG.gain.setTargetAtTime((.02+.1*pr)*mc,when,.1);
     W.gathered=pr;
   }
   if(tick%16===0&&!(tD<(X.hold||0))) explain(ts+'　'+(seg<=1?'第一次等待':'第二次等待 · build')+' '+wait.toFixed(0)+' 秒 · 集气 '+Math.round((W.gathered||0)*100)+'%（已注 '+Math.round(w)+' / '+TARGET+' g）');
 }
+/* ---- v5.9: clash-free harmony (no D / A / near-tune 9ths against the pentatonic melody) ---- */
+const W_SAFE={Cm:{bass:48,pad:[55,58,60,63],top:[67,70,72],choir:[60,67,70],pcs:[0,3,7,10]},
+              Ab:{bass:44,pad:[56,60,63,67],top:[72,75],choir:[56,63,67],pcs:[8,0,3,7]},
+              Bb:{bass:46,pad:[53,58,60,65],top:[70,72,77],choir:[58,65,72],pcs:[10,0,5]},        // B♭ sus2
+              Eb:{bass:51,pad:[55,58,63,65],top:[67,70,75],choir:[63,70,75],pcs:[3,7,10,5]}};      // E♭ add9, no D
+function wSafe(b){ const pr=W.prog||W_PROGS[0], s=W_SAFE[pr[((b%4)+4)%4]], k=m=>wK(m);
+  return {bass:k(s.bass),pad:s.pad.map(k),top:s.top.map(k),choir:s.choir.map(k),pcs:s.pcs}; }
+function v5Counter(m,b,extra){ // scale-true counter-line: 2 scale steps below the tune, nudged down to a chord tone
+  const pr=W.prog||W_PROGS[0], pcs=W_SAFE[pr[((b%4)+4)%4]].pcs;
+  for(const k of [2,3,4]){ const d=m-k, p=((wDeg(d)%12)+12)%12; if(pcs.indexOf(p)>=0) return wK(wDeg(d-(extra||0))); }
+  return wK(wDeg(m-2-(extra||0))); }
+function v5Warm(ms,when,dur,v){ // warm, dark, few voices — sits under the tune
+  const f1=ctx.createBiquadFilter(),f2=ctx.createBiquadFilter(),g=ctx.createGain(); f1.type=f2.type='lowpass'; f1.frequency.value=1100; f2.frequency.value=1500; f1.Q.value=f2.Q.value=.5;
+  g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.18); g.gain.setValueAtTime(v,when+Math.max(.2,dur-.1)); g.gain.linearRampToValueAtTime(0,when+dur+1.1);
+  ms.forEach(m=>[-6,0,6].forEach((d,k)=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtoh(m); o.detune.value=d; const og=ctx.createGain(); og.gain.value=1/(3*ms.length);
+    if(ctx.createStereoPanner){ const p=ctx.createStereoPanner(); p.pan.value=(k-1)*.5; o.connect(og); og.connect(p); p.connect(f1); } else { o.connect(og); og.connect(f1); } o.start(when); o.stop(when+dur+1.2); }));
+  f1.connect(f2); f2.connect(g); wOut(g,true); }
+function v5PluckBass(m,when,dur,v){
+  const o=ctx.createOscillator(),o2=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain(),sh=shaper(1.3);
+  o.type='sawtooth'; o2.type='sine'; o.frequency.value=o2.frequency.value=mtoh(m); f.type='lowpass'; f.frequency.setValueAtTime(1100,when); f.frequency.setTargetAtTime(200,when,.08);
+  const og=ctx.createGain(); og.gain.value=.6; o.connect(og); og.connect(f); o2.connect(f); f.connect(sh); sh.connect(g);
+  g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v,when+.004); g.gain.setValueAtTime(v,when+dur*.85); g.gain.linearRampToValueAtTime(0,when+dur);
+  wOut(g,true); o.start(when); o2.start(when); o.stop(when+dur+.05); o2.stop(when+dur+.05); }
+function v5SoftHat(when,v){ noiseHit(when,'bandpass',9500,.7,v,.02,T.duck); }
+function v5Shaker(when,v){ noiseHit(when,'bandpass',8000,1.2,v,.012,T.duck); }
+function v5RoundClap(when,v){ wClap(when,v*.7); const o=ctx.createOscillator(),g=ctx.createGain(); o.type='sine'; o.frequency.setValueAtTime(380,when); o.frequency.exponentialRampToValueAtTime(160,when+.06);
+  g.gain.setValueAtTime(0,when); g.gain.linearRampToValueAtTime(v*.5,when+.003); g.gain.setTargetAtTime(0,when+.004,.05); o.connect(g); g.connect(T.duck); o.start(when); o.stop(when+.3); }
 function v5Tick(when,tD,o){
-  const {w,f,realPour,breath,ts,SN,s16,b,beat,e8,BARd}=o, ch=wChordV(b), root=ch[0];
+  const {w,f,realPour,breath,ts,SN,s16,b,beat,e8,BARd}=o, sf=wSafe(b), root=sf.bass;
   // ---- section 1: the bloom writes the melody; piano plays every note as it is written
   if(SN===1){
-    if(s16===0){ v5Strings(ch.slice(1,4),when,BARd,.035,1400,.8,false); ch.slice(1,4).forEach((m,i)=>wPiano(m,when+.25*beat+i*.03,BARd*.85,.04)); v5Sub(root,when,BARd*.95,.08);
+    if(s16===0){ v5Strings(sf.pad.slice(0,3),when,BARd,.035,1400,.8,false); sf.pad.slice(1,4).forEach((m,i)=>wPiano(m,when+.25*beat+i*.03,BARd*.85,.04)); v5Sub(root,when,BARd*.95,.08);
+      if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(.5,when,.5);
       if(W.decided){ const cell=wCell5(b,f,tD); let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ wPiano(wK(wDeg(m)),t,ln*e8,.16); const tt0=t; lightAt(tt0,()=>LIGHT.flash(.45)); } t+=ln*e8; });
         const i=((b%8)+8)%8; explain(ts+'　焖蒸写旋律 · 第 '+(i+1)+' 小节：'+wTr(wChordName(b))+'，手的起伏选了第 '+((W.hookWhy||[])[i]+1)+' 种句型'+(i===3?'（前 4 小节写完，后 4 小节由它变化回答）':'')); } }
     return; }
@@ -1987,53 +2022,55 @@ function v5Tick(when,tD,o){
     dropHit(when); [0,7,12].forEach(k=>mang(wK(48)+k,when,.28,5)); subDrop(when);
     DK.title='顶点';DK.titleT=tD;flashCol='255,215,120';flashV=1.6;X.hold=tD+2; explain(ts+'　第三段一进来就是顶点：'+Math.round(w)+' g'); }
   if(s16!==0) return;            // everything below is laid out once per bar, on the downbeat
-  // ---- layer for this bar from the average flow of the bar just played
+  if(DK.fx&&DK.fx.rw) DK.fx.rw.gain.setTargetAtTime(S3?.5:.3,when,.5);   // a shorter room for the groove, bigger for the drop
   const fAvg=meanFlow(tD,BARd), first=!W.v5lay;
   let lay=Math.min(v5LayerOf(first?f:fAvg),S3?8:6); if(S3) lay=Math.max(lay,6);
   W.v5f=first?f:fAvg;
   if(W.hold){   // a pause inside the section: the music marks time — no drums or bass, chords filtered and pumping, melody rests
     W.v5lay=1; W.wasHold=true;
-    v5Strings(ch.slice(1),when,BARd,.07,1100,.05,true); wPiano(ch[2],when,beat*3,.06); wPiano(ch[3],when+2*beat,beat*2,.05);
+    v5Strings(sf.pad,when,BARd,.07,1100,.05,true); wPiano(sf.pad[1],when,beat*3,.06); wPiano(sf.pad[2],when+2*beat,beat*2,.05);
     for(let q=0;q<4;q++){ const d=T.duck.gain, tq=when+q*beat; d.setValueAtTime(.4,tq); d.linearRampToValueAtTime(1,tq+beat*.8); }
     if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' · 段内停顿：音乐原地踏步，一注水就回来（已注 '+Math.round(w)+' g）');
     return; }
   if(W.wasHold){ W.wasHold=false; wCrash(when,.07); }
   W.v5lay=lay;
   const cell=wCell5(b,f,tD), i8=((b%8)+8)%8;
-  // L1: melody (+ soft broken piano chords)
-  if(lay<=3) ch.slice(1,4).forEach((m,i)=>wPiano(m,when+i*e8,BARd*.8,.05));
+  // L1: melody (alone on top) + L6 counter-line (scale-true)
   { let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ const mm=wK(wDeg(m)), d=ln*e8;
-      if(!S3){ v5Faded(mm,t,d,(.2+.02*lay)*(W.hold?.6:1)); if(lay<=2) wPiano(mm,t,d,.1); }
-      else { const k=W.hold?.6:1; v5Faded(mm,t,d,.36*k,true); v5Faded(mm+12,t,d,.12*k,true); v5Super(mm+12,t,d,(.11+.014*lay)*k,true); if(lay>=8) v5Super(mm,t,d,.09*k,true); }
-      if(lay>=6){ const third=((m%5)+5)%5===0||((m%5)+5)%5===3?3:4; v5Strings([mm-12+third],t,d,.045,3000,.08,false); } }
+      if(!S3) v5Faded(mm,t,d,.2+.02*lay);
+      else { v5Faded(mm,t,d,.36,true); v5Faded(mm+12,t,d,.12,true); v5Super(mm+12,t,d,.11+.014*lay,true); if(lay>=8) v5Super(mm,t,d,.09,true); }
+      if(lay>=6) v5Strings([v5Counter(m,b)],t,d,S3?.045:.035,S3?3000:2200,.08,false); }
     t+=ln*e8; }); }
-  // L2: pad (S2 strings; S3 supersaw stack + offbeat stabs + choir + high strings + air)
+  // L2: chords under the tune (S2 warm pad; S3 supersaw stack + offbeat stabs + choir + one high string + air)
   if(lay>=2){
-    if(!S3) v5Strings(ch.slice(1),when,BARd,.05,2600,.45,true);
-    else { wSaws(ch.slice(1).concat(ch.slice(2).map(m=>m+12)),when,BARd,.018,3600,[-18,-9,-3,3,9,18],.01,true);
-      for(let q=0;q<4;q++) wSaws(ch.slice(1),when+q*beat+e8,e8*.8,.02,4200,[-18,-9,-3,3,9,18],.004,true);
-      choir([ch[2],ch[3],ch[4]],when,BARd,.04); v5Strings([ch[2]+24,ch[3]+24],when,BARd,.016,5000,.2,false);
+    if(!S3) v5Warm(sf.pad,when,BARd,.075);
+    else { wSaws(sf.pad.concat(sf.top),when,BARd,.018,3600,[-18,-9,-3,3,9,18],.01,true);
+      for(let q=0;q<4;q++) wSaws(sf.pad,when+q*beat+e8,e8*.8,.02,4200,[-18,-9,-3,3,9,18],.004,true);
+      choir(sf.choir,when,BARd,.04); v5Strings([sf.top[sf.top.length-1]+12],when,BARd,.016,5000,.2,false);
       noiseHit(when,'highpass',6000,.5,.025,BARd,T.duck); } }
-  // L3: kick (S2 on 1 & 3, S3 four on the floor with a click layer)
-  if(lay>=3){ for(let q=0;q<4;q++){ if(!S3&&q%2) continue; const tq=when+q*beat; if(S3) wKick(tq,.28,1); else tKick(tq,true,.6,.9); } }
-  // L4: bass line
-  if(lay>=4){ const pat=S3?[0,1,2,3,4,5,6,7]:[0,2,3,5,6];
-    pat.forEach(e=>{ v5Sub(root+(S3&&e%2?12:0),when+e*e8,e8*.85,.14); if(S3) wBass(root+24,when+e*e8,e8*.8,.06); }); }
-  // L5: hats + claps (+ S3 snare fill every 4th bar)
-  if(lay>=5){ for(let q=0;q<4;q++){ tHat(when+q*beat+e8,S3?.08:.05,S3); if(q%2) wClap(when+q*beat,S3?.32:.24); }
-    if(S3&&i8%4===3) for(let s=0;s<4;s++) noiseHit(when+3*beat+s*beat/4,'bandpass',1900,.8,.08+.03*s,.07,T.duck); }
-  // L7: arpeggio (S3 from L5)
-  if(lay>=7||(S3&&lay>=5)) for(let e=0;e<8;e++){ const m=ch.slice(1)[[0,1,2,3,2,1,0,2][e]]+12; wPluck(m,when+e*e8,e8*.9,.035,e%2?.6:-.6); }
+  // L3: kick (S2 on 1 & 3 with a light pump, S3 four on the floor with a click layer)
+  if(lay>=3){ for(let q=0;q<4;q++){ if(!S3&&q%2) continue; const tq=when+q*beat; if(S3) wKick(tq,.28,1); else tKick(tq,true,.78,.9); } }
+  // L4: bass (S2 walks root–fifth–octave locked to the kick; S3 rolls)
+  if(lay>=4){
+    if(!S3) [[0,0,1.4],[1.5,0,.4],[2,7,.9],[3,12,.45],[3.5,7,.45]].forEach(([bt,iv,d])=>v5PluckBass(root+iv,when+bt*beat,d*beat,.16));
+    else [0,1,2,3,4,5,6,7].forEach(e=>{ v5Sub(root+(e%2?12:0),when+e*e8,e8*.85,.14); wBass(root+24,when+e*e8,e8*.8,.06); }); }
+  // L5: hats + claps (S2 soft hats + shaker + round clap; S3 open hats, claps, snare fill every 4th bar)
+  if(lay>=5){
+    if(!S3){ for(let q=0;q<4;q++){ v5SoftHat(when+q*beat+e8,.09); if(q%2) v5RoundClap(when+q*beat,.24); } for(let k=0;k<16;k++) v5Shaker(when+k*TICK,k%2?.03:.018); }
+    else { for(let q=0;q<4;q++){ tHat(when+q*beat+e8,.08,true); if(q%2) v5RoundClap(when+q*beat,.32); }
+      if(i8%4===3) for(let s=0;s<4;s++) noiseHit(when+3*beat+s*beat/4,'bandpass',1900,.8,.08+.03*s,.07,T.duck); } }
+  // L7: arpeggio — chord tones only, above the tune (S3 from L5)
+  if(lay>=7||(S3&&lay>=5)){ const ar=sf.pad.map(m=>m+24); for(let e=0;e<8;e++) wPluck(ar[[0,1,2,3,2,1,0,2][e]],when+e*e8,e8*.9,.03,e%2?.6:-.6); }
   // L8 / S3: crash
-  if(!W.hold&&((S3&&i8%2===0)||(lay>=8&&i8%4===0))) wCrash(when,.09);
+  if((S3&&i8%2===0)||(lay>=8&&i8%4===0)) wCrash(when,.09);
   if(S3) LV.s3b=b+1;
-  if(S3){ const gb=b;   // bars since the drop landed
-    if(gb>=2) for(let k=0;k<16;k++) tHat(when+k*TICK,.03,false);
+  if(S3){ const gb=b;   // bars since the drop landed: keep growing
+    if(gb>=2) for(let k=0;k<16;k++) v5SoftHat(when+k*TICK,.05);
     if(gb>=3) for(let e=0;e<8;e+=2) v5Sub(root-12,when+e*e8,e8*1.7,.1);
     if(gb>=4) noiseHit(when,'highpass',6000,.5,.03,BARd,T.duck);
     if(gb>=5&&i8%4===3) for(let k=0;k<8;k++) noiseHit(when+2*beat+k*TICK,'bandpass',1900,.8,.08+.02*k,.07,T.duck);
-    if(gb>=1){ let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ const mm=wK(wDeg(m)); v5Super(mm,t,ln*e8,.07,true); if(gb>=4) v5Strings([mm-9],t,ln*e8,.04,3000,.06,false); } t+=ln*e8; }); } }
-  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g'+(W.hold?' · 段内停顿':''));
+    if(gb>=1){ let t=when; cell.forEach(([m,ln])=>{ if(m!==null){ const mm=wK(wDeg(m)); v5Super(mm,t,ln*e8,.07,true); if(gb>=4) v5Strings([v5Counter(m,b,5)],t,ln*e8,.04,3000,.06,false); } t+=ln*e8; }); } }
+  if(!(tD<(X.hold||0))) explain(ts+'　'+sect().name+' 第 '+(i8+1)+' 小节：'+wTr(wChordName(b))+(S3?' · 顶点':'')+' · 第 '+lay+'/8 层（上一小节平均 '+W.v5f.toFixed(1)+' g/s）· 已注 '+Math.round(w)+' g');
 }
 function onTickWalker(when,tD){
   technoSetup(); dkFx();
@@ -2066,7 +2103,7 @@ function onTickWalker(when,tD){
     const br=wBreath(when,ww)||0, s16w=((tick%16)+16)%16;
     const acc=Math.min(1,ww/12), rise=ww<4?0:Math.min(1,(ww-4)/8);
     const every=ww<4?16:ww<8?8:4;
-    if(wait<60&&s16w%8===0) hbPlay(when,1);
+    if(wait<60&&s16w%8===0) hbPlay(when,seg<=1?1.9:1.2);
     if(((tick%32)+32)%32===24) wRevSwell(when,TICK*8,.03+.07*acc);
     const mc=Math.min(4,.85/Math.max(.2,MASTER.gain.value));
     T.rsF.frequency.setTargetAtTime(Math.min(7500,300*Math.pow(2,rise*4.4)),when,.1); T.rsG.gain.setTargetAtTime((rise>0?.015+.09*rise:0)*mc,when,.1);
